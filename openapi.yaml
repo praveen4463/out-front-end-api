@@ -1,0 +1,28 @@
+swagger: "2.0"
+info:
+  description: "Zylitics front end api"
+  title: "Zylitics front end api"
+  # This version no. is just to showing in the console and has no affect on functionality, although it should be
+  # updated whenever production version is updated.
+  version: "0.1.0"
+host: "front.api.zylitics.io"
+x-google-endpoints:
+  - name: "front.api.zylitics.io"
+    allowCors: True
+basePath: "/beta"
+schemes:
+  - "http" # TLS is terminated before hitting ESP, so only http.
+consumes:
+  - "application/json"
+produces:
+  - "application/json"
+securityDefinitions:
+  firebase:
+    authorizationUrl: ""
+    flow: "implicit"
+    type: "oauth2"
+    x-google-issuer: "https://securetoken.google.com/zl-front-end"
+    x-google-jwks_uri: "https://www.googleapis.com/service_accounts/v1/metadata/x509/securetoken@system.gserviceaccount.com"
+    x-google-audiences: "zl-front-end"
+security:
+  - firebase: []

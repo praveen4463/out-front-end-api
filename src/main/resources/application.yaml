@@ -1,0 +1,27 @@
+---
+api-core:
+  project-id: zl-win-nodes
+  cloud-kms:
+    key-ring: zl-apps-auth-secret
+    key: default-prod
+    key-bucket: zl-secrets
+  esdb:
+    auth-user: elastic
+    auth-user-secret-cloud-file: zl-esdb-auth.encrypt
+    max-retries: 10
+    shot-metadata-index: bt_shot_metadata
+    zwl-program-output-index: zwl_program_output
+    browser-index: browser
+    env-var-host: ESDB_HOST
+  data-source:
+    db-name: zbtp
+    user-name: zbtp
+    user-secret-cloud-file: zbtp-auth.encrypt
+    # the private IP of instance, such as 10.11.12.9. CloudSql keeps the default 5432 port thus,
+    # no need to mention that.
+    private-host-cloud-file: zl-pgdb-private-host.encrypt
+    # small idle connections because this app works for a single session only and mostly just one
+    # thread will seek synchronous access to pgdb. see
+    # https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing
+    min-idle-conn-pool: 2
+---
