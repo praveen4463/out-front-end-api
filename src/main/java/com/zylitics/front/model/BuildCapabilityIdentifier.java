@@ -1,22 +1,16 @@
 package com.zylitics.front.model;
 
-import org.springframework.validation.annotation.Validated;
-
-import javax.validation.constraints.NotBlank;
-
-@Validated
-public class Project {
-
+public class BuildCapabilityIdentifier {
+  
   private int id;
   
-  @NotBlank
   private String name;
   
   public int getId() {
     return id;
   }
   
-  public Project setId(int id) {
+  public BuildCapabilityIdentifier setId(int id) {
     this.id = id;
     return this;
   }
@@ -25,14 +19,14 @@ public class Project {
     return name;
   }
   
-  public Project setName(String name) {
+  public BuildCapabilityIdentifier setName(String name) {
     this.name = name;
     return this;
   }
   
   @Override
   public String toString() {
-    return "Project{" +
+    return "BuildCapabilityIdentifiers{" +
         "id=" + id +
         ", name='" + name + '\'' +
         '}';

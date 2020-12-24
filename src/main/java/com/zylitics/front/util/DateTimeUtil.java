@@ -6,6 +6,7 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 
 public class DateTimeUtil {
   
@@ -34,5 +35,9 @@ public class DateTimeUtil {
       return null;
     }
     return timestamp.toLocalDateTime();
+  }
+  
+  public static String getFrondEndDisplayDate(LocalDateTime dateTime) {
+    return dateTime.format(DateTimeFormatter.ofPattern("MMM dd, yyyy, h:mm:ss a"));
   }
 }

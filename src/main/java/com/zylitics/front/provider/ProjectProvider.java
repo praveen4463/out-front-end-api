@@ -9,10 +9,10 @@ public interface ProjectProvider {
   
   /**
    * Saves a new project and returns it's id.
-   * @param newProject an instance of {@link NewProject}
+   * @param project an instance of {@link Project}
    * @return An {@link Optional} with new project's id or empty {@link Optional}
    */
-  Optional<Integer> saveNewProject(NewProject newProject);
+  Optional<Integer> saveNewProject(Project project, int userId);
   
   List<Project> getProjects(int userId);
 }

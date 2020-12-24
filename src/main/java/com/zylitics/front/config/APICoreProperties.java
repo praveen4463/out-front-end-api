@@ -50,6 +50,11 @@ public class APICoreProperties {
   
   public Esdb getEsdb() { return esdb; }
   
+  @Valid
+  private final Storage storage = new Storage();
+  
+  public Storage getStorage() {return storage;}
+  
   public static class DataSource {
     
     @NotBlank
@@ -250,6 +255,100 @@ public class APICoreProperties {
     public void setEnvVarHost(String envVarHost) {
       if (this.envVarHost == null) {
         this.envVarHost = envVarHost;
+      }
+    }
+  }
+  
+  public static class Storage {
+  
+    @NotBlank
+    private String serverLogsBucket;
+  
+    @NotBlank
+    private String elemShotsBucket;
+  
+    @NotBlank
+    private String userDataBucket;
+  
+    @NotBlank
+    private String userUploadsStorageDirTmpl;
+  
+    @NotBlank
+    private String commonUploadsBucket;
+    
+    @Min(10)
+    private Integer maxTestFileSizeMb;
+  
+    @Min(10)
+    private Integer maxCommonFileSizeMb;
+  
+    public String getServerLogsBucket() {
+      return serverLogsBucket;
+    }
+  
+    public void setServerLogsBucket(String serverLogsBucket) {
+      if (this.serverLogsBucket == null) {
+        this.serverLogsBucket = serverLogsBucket;
+      }
+    }
+  
+    public String getElemShotsBucket() {
+      return elemShotsBucket;
+    }
+  
+    public void setElemShotsBucket(String elemShotsBucket) {
+      if (this.elemShotsBucket == null) {
+        this.elemShotsBucket = elemShotsBucket;
+      }
+    }
+  
+    public String getUserDataBucket() {
+      return userDataBucket;
+    }
+  
+    public void setUserDataBucket(String userDataBucket) {
+      if (this.userDataBucket == null) {
+        this.userDataBucket = userDataBucket;
+      }
+    }
+  
+    public String getUserUploadsStorageDirTmpl() {
+      return userUploadsStorageDirTmpl;
+    }
+  
+    public void setUserUploadsStorageDirTmpl(String userUploadsStorageDirTmpl) {
+      if (this.userUploadsStorageDirTmpl == null) {
+        this.userUploadsStorageDirTmpl = userUploadsStorageDirTmpl;
+      }
+    }
+  
+    public String getCommonUploadsBucket() {
+      return commonUploadsBucket;
+    }
+  
+    public void setCommonUploadsBucket(String commonUploadsBucket) {
+      if (this.commonUploadsBucket == null) {
+        this.commonUploadsBucket = commonUploadsBucket;
+      }
+    }
+  
+    public int getMaxTestFileSizeMb() {
+      return maxTestFileSizeMb;
+    }
+  
+    public void setMaxTestFileSizeMb(Integer maxTestFileSizeMb) {
+      if (this.maxTestFileSizeMb == null) {
+        this.maxTestFileSizeMb = maxTestFileSizeMb;
+      }
+    }
+  
+    public int getMaxCommonFileSizeMb() {
+      return maxCommonFileSizeMb;
+    }
+  
+    public void setMaxCommonFileSizeMb(Integer maxCommonFileSizeMb) {
+      if (this.maxCommonFileSizeMb == null) {
+        this.maxCommonFileSizeMb = maxCommonFileSizeMb;
       }
     }
   }

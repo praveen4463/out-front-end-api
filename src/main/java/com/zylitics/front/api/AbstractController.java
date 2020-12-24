@@ -2,20 +2,15 @@ package com.zylitics.front.api;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.zylitics.front.SecretsManager;
 import com.zylitics.front.http.ErrorResponse;
 import com.zylitics.front.model.UserFromProxy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.event.ContextRefreshedEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
-import java.io.IOException;
-import java.time.Clock;
 import java.util.Base64;
 
 public abstract class AbstractController {
@@ -26,20 +21,6 @@ public abstract class AbstractController {
       " the request and we're working on to fix it. Please contact us if the issue persists.";
   
   static final String USER_INFO_REQ_HEADER = "X-Endpoint-API-UserInfo";
-  
-  final SecretsManager secretsManager;
-  
-  final Clock clock;
-  
-  @SuppressWarnings("unused")
-  AbstractController(SecretsManager secretsManager) {
-    this(secretsManager, Clock.systemUTC());
-  }
-  
-  AbstractController(SecretsManager secretsManager, Clock clock) {
-    this.secretsManager = secretsManager;
-    this.clock = clock;
-  }
   
   int getUserId(String userInfoHeaderValue) {
     byte[] decoded = Base64.getUrlDecoder().decode(userInfoHeaderValue);
@@ -66,6 +47,10 @@ public abstract class AbstractController {
     return processErrResponse(ex, HttpStatus.BAD_REQUEST, MASKED_ERROR);
   }
   
+  // TODO: IllegalArgumentException errors are relayed as it to front end but sometimes error generated
+  //  by libraries also throw this exception which causes cryptic errors to be shown to user. Let's
+  //  think about it some later on, probably we can filter out exception triggered by our app from
+  //  trace and relay only those messages. We throw this mostly when some validation fails.
   @SuppressWarnings("unused")
   @ExceptionHandler
   public ResponseEntity<ErrorResponse> handleExceptions(IllegalArgumentException ex) {
@@ -103,18 +88,5 @@ public abstract class AbstractController {
     return ResponseEntity
         .status(status)
         .body(new ErrorResponse().setMessage(userErrorMsg));
-  }
-  
-  // published when all beans are loaded
-  @EventListener(ContextRefreshedEvent.class)
-  void onContextRefreshedEvent() throws IOException {
-    LOG.debug("ContextRefreshEvent was triggered");
-    
-    // Close SecretsManager once all beans that required it are loaded, as we don't need to until
-    // this VM is deleted from here, where a new manager is created.
-    if (secretsManager != null) {
-      LOG.debug("secretsManager will now close");
-      secretsManager.close();
-    }
   }
 }

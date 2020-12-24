@@ -18,9 +18,6 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-
-import javax.servlet.annotation.WebFilter;
 import javax.sql.DataSource;
 
 // TODO: I am not too sure what DataAccessExceptions should be re-tried, let's first watch logs and
@@ -31,7 +28,6 @@ import javax.sql.DataSource;
 //  we're using. Detect errors there, reattempt if necessary and throw if failed.
 //  https://docs.spring.io/spring/docs/current/spring-framework-reference/data-access.html#dao-exceptions
 @SpringBootApplication
-
 public class Launcher {
   
   public static void main(String[] args) {

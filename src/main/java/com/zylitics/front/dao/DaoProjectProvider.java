@@ -2,9 +2,9 @@ package com.zylitics.front.dao;
 
 import com.google.common.base.Preconditions;
 import com.zylitics.front.model.Project;
-import com.zylitics.front.provider.NewProject;
 import com.zylitics.front.provider.ProjectProvider;
 import com.zylitics.front.util.CollectionUtil;
+import com.zylitics.front.util.DateTimeUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.SqlParameterValue;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -35,7 +35,7 @@ class DaoProjectProvider extends AbstractDaoProvider implements ProjectProvider 
     String sql = "SELECT" +
         " bt_project_id" +
         ", name" +
-        " FROM bt_project WHERE is_active = true AND zluser_id = :zluser_id;";
+        " FROM bt_project WHERE zluser_id = :zluser_id;";
     SqlParameterSource namedParams = new MapSqlParameterSource("zluser_id",
         new SqlParameterValue(Types.INTEGER, userId));
     
@@ -46,7 +46,7 @@ class DaoProjectProvider extends AbstractDaoProvider implements ProjectProvider 
   }
   
   @Override
-  public Optional<Integer> saveNewProject(NewProject newProject) {
+  public Optional<Integer> saveNewProject(Project newProject,  int userId) {
     Preconditions.checkNotNull(newProject, "newProject can't be null");
     
     // first check whether there is a duplicate
@@ -57,7 +57,7 @@ class DaoProjectProvider extends AbstractDaoProvider implements ProjectProvider 
   
     params.put("name", new SqlParameterValue(Types.OTHER, newProject.getName()));
   
-    params.put("zluser_id", new SqlParameterValue(Types.INTEGER, newProject.getUserId()));
+    params.put("zluser_id", new SqlParameterValue(Types.INTEGER, userId));
   
     SqlParameterSource namedParams = new MapSqlParameterSource(params);
   
@@ -70,7 +70,7 @@ class DaoProjectProvider extends AbstractDaoProvider implements ProjectProvider 
         " VALUES (:name, :zluser_id, :create_date) RETURNING bt_project_id;";
     
     params.put("create_date", new SqlParameterValue(Types.TIMESTAMP_WITH_TIMEZONE,
-        newProject.getCreateDate()));
+        DateTimeUtil.getCurrentUTC()));
     
     namedParams = new MapSqlParameterSource(params);
     

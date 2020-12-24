@@ -24,4 +24,12 @@ api-core:
     # thread will seek synchronous access to pgdb. see
     # https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing
     min-idle-conn-pool: 2
+  storage:
+    server-logs-bucket: zl-server-logs
+    elem-shots-bucket: zl-elem-shots
+    user-data-bucket: zl-user-data
+    user-uploads-storage-dir-tmpl : USER_ID/uploads
+    common-uploads-bucket: zl-common-uploads
+    max-test-file-size-mb: 200
+    max-common-file-size-mb: 100
 ---
