@@ -13,10 +13,7 @@ import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.stereotype.Repository;
 
 import java.sql.Types;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Repository
 class DaoProjectProvider extends AbstractDaoProvider implements ProjectProvider {
@@ -55,14 +52,15 @@ class DaoProjectProvider extends AbstractDaoProvider implements ProjectProvider 
   
     Map<String, SqlParameterValue> params = new HashMap<>(CollectionUtil.getInitialCapacity(3));
   
-    params.put("name", new SqlParameterValue(Types.OTHER, newProject.getName()));
+    params.put("name", new SqlParameterValue(Types.VARCHAR, newProject.getName()));
   
     params.put("zluser_id", new SqlParameterValue(Types.INTEGER, userId));
   
     SqlParameterSource namedParams = new MapSqlParameterSource(params);
   
     Integer matchingProjects = jdbc.queryForObject(sql, namedParams, Integer.class);
-    if (matchingProjects != null && matchingProjects > 0) {
+    Objects.requireNonNull(matchingProjects);
+    if (matchingProjects > 0) {
       throw new IllegalArgumentException("A project with the same name already exists");
     }
     

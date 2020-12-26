@@ -23,8 +23,6 @@ public class ProjectController extends AbstractController {
   
   private static final Logger LOG = LoggerFactory.getLogger(ProjectController.class);
   
-  private static final int MAX_PROJECT_NAME_LENGTH = 50;
-  
   private final ProjectProvider projectProvider;
   
   // require secretsManager only in this controller for closing it as onContextRefreshedEvent can't
@@ -43,9 +41,6 @@ public class ProjectController extends AbstractController {
       @Validated @RequestBody Project project,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo) {
     int userId = getUserId(userInfo);
-  
-    Preconditions.checkArgument(project.getName().length() <= MAX_PROJECT_NAME_LENGTH,
-        " Project name can't contain more than " + MAX_PROJECT_NAME_LENGTH + " characters");
     
     Optional<Integer> projectId = projectProvider.saveNewProject(project, userId);
     

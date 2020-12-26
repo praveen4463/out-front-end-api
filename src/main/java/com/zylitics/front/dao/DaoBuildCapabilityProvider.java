@@ -14,10 +14,7 @@ import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.stereotype.Repository;
 
 import java.sql.Types;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Repository
 public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
@@ -45,7 +42,8 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
     SqlParameterSource namedParams = new MapSqlParameterSource(params);
   
     Integer matchingProjects = jdbc.queryForObject(sql, namedParams, Integer.class);
-    if (matchingProjects != null && matchingProjects > 0) {
+    Objects.requireNonNull(matchingProjects);
+    if (matchingProjects > 0) {
       throw new IllegalArgumentException("A build capability with the same name already exists");
     }
     
@@ -98,7 +96,8 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
     SqlParameterSource namedParams = new MapSqlParameterSource(params);
   
     Integer matchingProjects = jdbc.queryForObject(sql, namedParams, Integer.class);
-    if (matchingProjects != null && matchingProjects > 0) {
+    Objects.requireNonNull(matchingProjects);
+    if (matchingProjects > 0) {
       throw new IllegalArgumentException("A build capability with the same name already exists");
     }
   

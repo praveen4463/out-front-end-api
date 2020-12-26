@@ -3,13 +3,14 @@ package com.zylitics.front.model;
 import org.springframework.validation.annotation.Validated;
 
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Size;
 
 @Validated
 public class Project {
 
   private int id;
   
-  @NotBlank
+  @Size(min = 1, max = 50)
   private String name;
   
   public int getId() {

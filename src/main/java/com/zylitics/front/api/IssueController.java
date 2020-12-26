@@ -4,9 +4,11 @@ import com.google.cloud.storage.Storage;
 import com.zylitics.front.config.APICoreProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.validation.constraints.NotBlank;
 import java.util.UUID;
 
 @RestController
@@ -41,11 +43,11 @@ public class IssueController extends AbstractController {
   @SuppressWarnings("unused")
   @PostMapping
   public ResponseEntity<Void> sendIssue(
-      @RequestBody String desc,
-      @RequestBody(required = false) String fileName,
+      @RequestBody @Validated SendIssueRequest sendIssueRequest,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo) {
     int userId = getUserId(userInfo);
-    System.out.println(fileName + desc + userId + " issue is sent");
+    System.out.println(sendIssueRequest.getFileName() +
+        sendIssueRequest.getDesc() + userId + " issue is sent");
     // TODO: send an email with subject: Issue report send by user: USER_ID
     //  and in body the desc and in the end:
     //  attached file (if available): FILE_NAME
@@ -54,5 +56,32 @@ public class IssueController extends AbstractController {
   
   private String getFilePrefix(int userId) {
     return String.valueOf(userId);
+  }
+  
+  @Validated
+  private static class SendIssueRequest {
+    
+    @NotBlank
+    private String desc;
+    
+    private String fileName;
+  
+    public String getDesc() {
+      return desc;
+    }
+  
+    public SendIssueRequest setDesc(String desc) {
+      this.desc = desc;
+      return this;
+    }
+  
+    public String getFileName() {
+      return fileName;
+    }
+  
+    public SendIssueRequest setFileName(String fileName) {
+      this.fileName = fileName;
+      return this;
+    }
   }
 }

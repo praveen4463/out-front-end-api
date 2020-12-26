@@ -18,6 +18,10 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
+
 import javax.sql.DataSource;
 
 // TODO: I am not too sure what DataAccessExceptions should be re-tried, let's first watch logs and
@@ -102,4 +106,15 @@ public class Launcher {
     config.setMinimumIdle(ds.getMinIdleConnPool());
     return new HikariDataSource(config);
   }
+  
+  // https://docs.spring.io/spring/docs/current/spring-framework-reference/data-access.html#tx-prog-template-settings
+  @Bean
+  @Profile({"production", "e2e"})
+  TransactionTemplate transactionTemplate(PlatformTransactionManager platformTransactionManager) {
+    TransactionTemplate transactionTemplate = new TransactionTemplate(platformTransactionManager);
+    // TODO (optional): specify any transaction settings.
+    transactionTemplate.setIsolationLevel(TransactionDefinition.ISOLATION_DEFAULT);
+    return transactionTemplate;
+  }
+  
 }

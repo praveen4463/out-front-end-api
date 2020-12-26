@@ -2,6 +2,7 @@ package com.zylitics.front.api;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.zylitics.front.exception.UnauthorizedException;
 import com.zylitics.front.http.ErrorResponse;
 import com.zylitics.front.model.UserFromProxy;
 import org.slf4j.Logger;
@@ -58,6 +59,13 @@ public abstract class AbstractController {
     
     // use 422 on validation failure https://stackoverflow.com/a/25489597/1624454
     return processErrResponse(ex, HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+  }
+  
+  @ExceptionHandler
+  public ResponseEntity<ErrorResponse> handleExceptions(UnauthorizedException ex) {
+    LOG.debug("An UnauthorizedException handler was called");
+    
+    return processErrResponse(ex, HttpStatus.UNAUTHORIZED, ex.getMessage());
   }
   
   /**
