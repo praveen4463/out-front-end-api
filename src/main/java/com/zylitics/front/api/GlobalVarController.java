@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("${app-short-version}/projects/{projectId}/globalVars")
@@ -28,9 +27,9 @@ public class GlobalVarController extends AbstractController {
       @PathVariable @Min(1) int projectId,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
   ) {
-    Optional<Integer> id = globalVarProvider.newGlobalVar(globalVar, projectId,
+    int id = globalVarProvider.newGlobalVar(globalVar, projectId,
         getUserId(userInfo));
-    return ResponseEntity.ok(id.orElseThrow(RuntimeException :: new));
+    return ResponseEntity.ok(id);
   }
   
   @SuppressWarnings("unused")
@@ -39,8 +38,8 @@ public class GlobalVarController extends AbstractController {
       @RequestBody @Validated UpdateRequest updateRequest,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
   ) {
-    globalVarProvider.updateValue(updateRequest.getValue(), updateRequest.getGlobalVarId(),
-        getUserId(userInfo));
+    globalVarProvider.updateValue(updateRequest.getValue(),
+        updateRequest.getGlobalVarId(), getUserId(userInfo));
     return ResponseEntity.ok().build();
   }
   

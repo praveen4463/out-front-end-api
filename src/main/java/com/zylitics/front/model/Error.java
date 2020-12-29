@@ -1,6 +1,6 @@
-package com.zylitics.front.http;
+package com.zylitics.front.model;
 
-public class ErrorResponse {
+public class Error {
   
   private String message;
   
@@ -9,7 +9,7 @@ public class ErrorResponse {
     return message;
   }
   
-  public ErrorResponse setMessage(String message) {
+  public Error setMessage(String message) {
     this.message = message;
     return this;
   }

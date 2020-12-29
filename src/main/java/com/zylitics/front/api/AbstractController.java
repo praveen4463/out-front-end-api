@@ -3,7 +3,7 @@ package com.zylitics.front.api;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zylitics.front.exception.UnauthorizedException;
-import com.zylitics.front.http.ErrorResponse;
+import com.zylitics.front.model.Error;
 import com.zylitics.front.model.UserFromProxy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,9 +40,9 @@ public abstract class AbstractController {
    */
   @SuppressWarnings("unused")
   @ExceptionHandler
-  public ResponseEntity<ErrorResponse> handleExceptions(MethodArgumentNotValidException ex) {
+  public ResponseEntity<Error> handleExceptions(MethodArgumentNotValidException ex) {
     LOG.debug("An ArgumentNotValid handler was called");
-  
+    
     // Don't send actual error message on bad request as well cause it would be us if that binding is failed,
     // which means client code has bug.
     return processErrResponse(ex, HttpStatus.BAD_REQUEST, MASKED_ERROR);
@@ -54,15 +54,16 @@ public abstract class AbstractController {
   //  trace and relay only those messages. We throw this mostly when some validation fails.
   @SuppressWarnings("unused")
   @ExceptionHandler
-  public ResponseEntity<ErrorResponse> handleExceptions(IllegalArgumentException ex) {
+  public ResponseEntity<Error> handleExceptions(IllegalArgumentException ex) {
     LOG.debug("An IllegalArgumentException handler was called");
     
     // use 422 on validation failure https://stackoverflow.com/a/25489597/1624454
     return processErrResponse(ex, HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
   }
   
+  @SuppressWarnings("unused")
   @ExceptionHandler
-  public ResponseEntity<ErrorResponse> handleExceptions(UnauthorizedException ex) {
+  public ResponseEntity<Error> handleExceptions(UnauthorizedException ex) {
     LOG.debug("An UnauthorizedException handler was called");
     
     return processErrResponse(ex, HttpStatus.UNAUTHORIZED, ex.getMessage());
@@ -77,7 +78,7 @@ public abstract class AbstractController {
    */
   @SuppressWarnings("unused")
   @ExceptionHandler
-  public ResponseEntity<ErrorResponse> handleExceptions(Exception ex) {
+  public ResponseEntity<Error> handleExceptions(Exception ex) {
     LOG.debug("An Exception handler was called");
   
     // Note: original error is not sent to client as this api is internal and we don't want end user
@@ -85,7 +86,7 @@ public abstract class AbstractController {
     return processErrResponse(ex, HttpStatus.INTERNAL_SERVER_ERROR, MASKED_ERROR);
   }
   
-  private ResponseEntity<ErrorResponse> processErrResponse(Throwable ex, HttpStatus status,
+  private ResponseEntity<Error> processErrResponse(Throwable ex, HttpStatus status,
                                                            String userErrorMsg) {
     // Log exception.
     // TODO: we'll have to see what type of errors we may get here and may require more information
@@ -95,6 +96,6 @@ public abstract class AbstractController {
     
     return ResponseEntity
         .status(status)
-        .body(new ErrorResponse().setMessage(userErrorMsg));
+        .body(new Error().setMessage(userErrorMsg));
   }
 }

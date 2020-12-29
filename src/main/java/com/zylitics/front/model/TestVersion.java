@@ -1,13 +1,20 @@
 package com.zylitics.front.model;
 
-import javax.annotation.Nullable;
+import org.springframework.validation.annotation.Validated;
 
-public class Version {
+import javax.annotation.Nullable;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Size;
+
+@Validated
+public class TestVersion {
   
   private int id;
   
+  @Size(min = 1, max = 50)
   private String name;
   
+  @Min(1)
   private int testId;
   
   @Nullable
@@ -19,7 +26,7 @@ public class Version {
     return id;
   }
   
-  public Version setId(int id) {
+  public TestVersion setId(int id) {
     this.id = id;
     return this;
   }
@@ -28,7 +35,7 @@ public class Version {
     return name;
   }
   
-  public Version setName(String name) {
+  public TestVersion setName(String name) {
     this.name = name;
     return this;
   }
@@ -37,7 +44,7 @@ public class Version {
     return testId;
   }
   
-  public Version setTestId(int testId) {
+  public TestVersion setTestId(int testId) {
     this.testId = testId;
     return this;
   }
@@ -47,7 +54,7 @@ public class Version {
     return code;
   }
   
-  public Version setCode(String code) {
+  public TestVersion setCode(String code) {
     this.code = code;
     return this;
   }
@@ -56,7 +63,7 @@ public class Version {
     return isCurrent;
   }
   
-  public Version setIsCurrent(boolean isCurrent) {
+  public TestVersion setIsCurrent(boolean isCurrent) {
     this.isCurrent = isCurrent;
     return this;
   }

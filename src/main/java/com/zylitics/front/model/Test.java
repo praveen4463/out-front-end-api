@@ -1,16 +1,23 @@
 package com.zylitics.front.model;
 
+import org.springframework.validation.annotation.Validated;
+
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Size;
 import java.util.List;
 
+@Validated
 public class Test {
   
   private int id;
   
+  @Size(min = 1, max = 200)
   private String name;
   
+  @Min(1)
   private int fileId;
   
-  private List<Version> versions;
+  private List<TestVersion> versions;
   
   public int getId() {
     return id;
@@ -39,12 +46,13 @@ public class Test {
     return this;
   }
   
-  public List<Version> getVersions() {
+  @SuppressWarnings("unused")
+  public List<TestVersion> getVersions() {
     return versions;
   }
   
-  public Test setVersions(List<Version> versions) {
-    this.versions = versions;
+  public Test setVersions(List<TestVersion> testVersions) {
+    this.versions = testVersions;
     return this;
   }
   

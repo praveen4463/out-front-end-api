@@ -26,6 +26,7 @@ public class TestFile {
     return this;
   }
   
+  @SuppressWarnings("unused")
   public String getCreateDate() {
     return createDate;
   }

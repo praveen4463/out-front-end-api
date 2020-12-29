@@ -1,11 +1,16 @@
 package com.zylitics.front.model;
 
+import org.springframework.validation.annotation.Validated;
+
+import javax.validation.constraints.Size;
 import java.util.List;
 
+@Validated
 public class File {
   
   private int id;
   
+  @Size(min = 1, max = 50)
   private String name;
   
   private List<Test> tests;
@@ -28,10 +33,12 @@ public class File {
     return this;
   }
   
+  @SuppressWarnings("unused")
   public List<Test> getTests() {
     return tests;
   }
   
+  @SuppressWarnings("UnusedReturnValue")
   public File setTests(List<Test> tests) {
     this.tests = tests;
     return this;

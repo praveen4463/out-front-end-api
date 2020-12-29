@@ -3,7 +3,6 @@ package com.zylitics.front.api;
 import com.zylitics.front.model.BuildCapability;
 import com.zylitics.front.model.BuildCapabilityIdentifier;
 import com.zylitics.front.provider.BuildCapabilityProvider;
-import com.zylitics.front.util.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -26,13 +25,13 @@ public class BuildCapabilityController extends AbstractController {
   @GetMapping
   public ResponseEntity<List<BuildCapabilityIdentifier>> getBuildCapabilitiesIdentifier(
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo) {
-    int userId = getUserId(userInfo);
-    
-    return ResponseEntity.ok(buildCapabilityProvider.getBuildCapabilitiesIdentifier(userId));
+    return ResponseEntity.ok(buildCapabilityProvider
+        .getBuildCapabilitiesIdentifier(getUserId(userInfo)));
   }
   
   // NOTE: the update is a POST as it accepts updates entire row data, when we have a method that can
   // update specified columns, it should be a PATCH
+  @SuppressWarnings("unused")
   @PostMapping
   public ResponseEntity<Integer> newCapabilityOrUpdate(
       @Validated @RequestBody BuildCapability buildCapability,
@@ -42,15 +41,10 @@ public class BuildCapabilityController extends AbstractController {
     int buildCapabilityId;
     
     if (buildCapability.getId() > 0) {
-      int result = buildCapabilityProvider.updateCapability(buildCapability, userId);
-      CommonUtil.validateSingleRowDbCommit(result);
+      buildCapabilityProvider.updateCapability(buildCapability, userId);
       buildCapabilityId = buildCapability.getId();
     } else {
-      Optional<Integer> id = buildCapabilityProvider.saveNewCapability(buildCapability, userId);
-      if (!id.isPresent()) {
-        throw new RuntimeException("Couldn't create build capability " + buildCapability.getName());
-      }
-      buildCapabilityId = id.get();
+      buildCapabilityId = buildCapabilityProvider.saveNewCapability(buildCapability, userId);
     }
     
     return ResponseEntity.ok(buildCapabilityId);
@@ -60,9 +54,8 @@ public class BuildCapabilityController extends AbstractController {
   public ResponseEntity<BuildCapability> getBuildCapability(
       @PathVariable int buildCapabilityId,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo) {
-    int userId = getUserId(userInfo);
     Optional<BuildCapability> buildCapability =
-        buildCapabilityProvider.getBuildCapability(buildCapabilityId, userId);
+        buildCapabilityProvider.getBuildCapability(buildCapabilityId, getUserId(userInfo));
     if (!buildCapability.isPresent()) {
       throw new RuntimeException("Could get build capability with id " + buildCapabilityId);
     }
@@ -73,9 +66,7 @@ public class BuildCapabilityController extends AbstractController {
   public ResponseEntity<Void> deleteBuildCapability(
       @PathVariable int buildCapabilityId,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo) {
-    int userId = getUserId(userInfo);
-    int result = buildCapabilityProvider.deleteCapability(buildCapabilityId, userId);
-    CommonUtil.validateSingleRowDbCommit(result);
+    buildCapabilityProvider.deleteCapability(buildCapabilityId, getUserId(userInfo));
     return ResponseEntity.ok().build();
   }
 }

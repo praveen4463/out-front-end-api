@@ -3,8 +3,7 @@ package com.zylitics.front.dao;
 import com.google.common.base.Preconditions;
 import com.zylitics.front.model.Project;
 import com.zylitics.front.provider.ProjectProvider;
-import com.zylitics.front.util.CollectionUtil;
-import com.zylitics.front.util.DateTimeUtil;
+import com.zylitics.front.util.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.SqlParameterValue;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -43,23 +42,16 @@ class DaoProjectProvider extends AbstractDaoProvider implements ProjectProvider 
   }
   
   @Override
-  public Optional<Integer> saveNewProject(Project newProject,  int userId) {
+  public int saveNewProject(Project newProject, int userId) {
     Preconditions.checkNotNull(newProject, "newProject can't be null");
     
     // first check whether there is a duplicate
     String sql = "SELECT count(*) FROM bt_project WHERE zluser_id = :zluser_id" +
         " AND name ILIKE lower(:name);";
   
-    Map<String, SqlParameterValue> params = new HashMap<>(CollectionUtil.getInitialCapacity(3));
-  
-    params.put("name", new SqlParameterValue(Types.VARCHAR, newProject.getName()));
-  
-    params.put("zluser_id", new SqlParameterValue(Types.INTEGER, userId));
-  
-    SqlParameterSource namedParams = new MapSqlParameterSource(params);
-  
-    Integer matchingProjects = jdbc.queryForObject(sql, namedParams, Integer.class);
-    Objects.requireNonNull(matchingProjects);
+    int matchingProjects = jdbc.query(sql,
+        new SqlParamsBuilder(userId).withVarchar("name", newProject.getName()).build(),
+        CommonUtil.getSingleInt()).get(0);
     if (matchingProjects > 0) {
       throw new IllegalArgumentException("A project with the same name already exists");
     }
@@ -67,11 +59,8 @@ class DaoProjectProvider extends AbstractDaoProvider implements ProjectProvider 
     sql = "INSERT INTO bt_project (name, zluser_id, create_date)" +
         " VALUES (:name, :zluser_id, :create_date) RETURNING bt_project_id;";
     
-    params.put("create_date", new SqlParameterValue(Types.TIMESTAMP_WITH_TIMEZONE,
-        DateTimeUtil.getCurrentUTC()));
-    
-    namedParams = new MapSqlParameterSource(params);
-    
-    return Optional.ofNullable(jdbc.queryForObject(sql, namedParams, Integer.class));
+    return jdbc.query(sql, new SqlParamsBuilder(userId)
+        .withVarchar("name", newProject.getName())
+        .withCreateDate().build(), CommonUtil.getSingleInt()).get(0);
   }
 }

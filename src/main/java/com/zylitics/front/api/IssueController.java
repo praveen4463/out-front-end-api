@@ -70,6 +70,7 @@ public class IssueController extends AbstractController {
       return desc;
     }
   
+    @SuppressWarnings("unused")
     public SendIssueRequest setDesc(String desc) {
       this.desc = desc;
       return this;
@@ -79,6 +80,7 @@ public class IssueController extends AbstractController {
       return fileName;
     }
   
+    @SuppressWarnings("unused")
     public SendIssueRequest setFileName(String fileName) {
       this.fileName = fileName;
       return this;

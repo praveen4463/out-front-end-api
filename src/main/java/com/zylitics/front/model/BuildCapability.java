@@ -279,10 +279,12 @@ public class BuildCapability {
     return this;
   }
   
+  @SuppressWarnings("unused")
   public String getCreateDateFormatted() {
     return createDateFormatted;
   }
   
+  @SuppressWarnings("unused")
   public BuildCapability setCreateDateFormatted(String createDateFormatted) {
     this.createDateFormatted = createDateFormatted;
     return this;

@@ -1,5 +1,6 @@
 package com.zylitics.front.dao;
 
+import com.zylitics.front.util.DateTimeUtil;
 import org.springframework.jdbc.core.SqlParameterValue;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
@@ -27,6 +28,12 @@ class SqlParamsBuilder {
   
   SqlParamsBuilder withProject(int projectId) {
     params.put("bt_project_id", new SqlParameterValue(Types.INTEGER, projectId));
+    return this;
+  }
+  
+  SqlParamsBuilder withCreateDate() {
+    params.put("create_date", new SqlParameterValue(Types.TIMESTAMP_WITH_TIMEZONE,
+        DateTimeUtil.getCurrentUTC()));
     return this;
   }
   
@@ -60,7 +67,8 @@ class SqlParamsBuilder {
     return this;
   }
   
-  SqlParamsBuilder withArray(String name, Object[] value, JDBCType elementType) {
+  SqlParamsBuilder withArray(String name, Object[] value,
+                             @SuppressWarnings("SameParameterValue") JDBCType elementType) {
     params.put(name, new SqlParameterValue(Types.ARRAY, elementType.getName()
         , new ArraySqlTypeValue(value)));
     return this;

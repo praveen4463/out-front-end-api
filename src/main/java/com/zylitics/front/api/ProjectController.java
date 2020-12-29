@@ -1,6 +1,5 @@
 package com.zylitics.front.api;
 
-import com.google.common.base.Preconditions;
 import com.zylitics.front.SecretsManager;
 import com.zylitics.front.model.Project;
 import com.zylitics.front.provider.ProjectProvider;
@@ -15,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("${app-short-version}/projects")
@@ -42,13 +40,9 @@ public class ProjectController extends AbstractController {
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo) {
     int userId = getUserId(userInfo);
     
-    Optional<Integer> projectId = projectProvider.saveNewProject(project, userId);
+    int projectId = projectProvider.saveNewProject(project, userId);
     
-    if (!projectId.isPresent()) {
-      throw new RuntimeException("Couldn't create project " + project.getName());
-    }
-    
-    return ResponseEntity.ok(new Project().setId(projectId.get()).setName(project.getName()));
+    return ResponseEntity.ok(new Project().setId(projectId).setName(project.getName()));
   }
   
   @SuppressWarnings("unused")

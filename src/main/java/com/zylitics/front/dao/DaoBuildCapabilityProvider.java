@@ -4,16 +4,12 @@ import com.google.common.base.Preconditions;
 import com.zylitics.front.model.BuildCapability;
 import com.zylitics.front.model.BuildCapabilityIdentifier;
 import com.zylitics.front.provider.BuildCapabilityProvider;
-import com.zylitics.front.util.CollectionUtil;
-import com.zylitics.front.util.DateTimeUtil;
+import com.zylitics.front.util.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.SqlParameterValue;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.stereotype.Repository;
 
-import java.sql.Types;
 import java.util.*;
 
 @Repository
@@ -26,23 +22,15 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
   }
   
   @Override
-  public Optional<Integer> saveNewCapability(BuildCapability buildCapability, int userId) {
+  public int saveNewCapability(BuildCapability buildCapability, int userId) {
     Preconditions.checkNotNull(buildCapability, "buildCapability can't be null");
     
     // first check whether there is a duplicate
     String sql = "SELECT count(*) FROM bt_build_capability WHERE zluser_id = :zluser_id" +
         " AND name ILIKE lower(:name);";
   
-    Map<String, SqlParameterValue> params = new HashMap<>(CollectionUtil.getInitialCapacity(25));
-  
-    params.put("name", new SqlParameterValue(Types.OTHER, buildCapability.getName()));
-  
-    params.put("zluser_id", new SqlParameterValue(Types.INTEGER, userId));
-  
-    SqlParameterSource namedParams = new MapSqlParameterSource(params);
-  
-    Integer matchingProjects = jdbc.queryForObject(sql, namedParams, Integer.class);
-    Objects.requireNonNull(matchingProjects);
+    int matchingProjects = jdbc.query(sql, new SqlParamsBuilder(userId)
+        .withOther("name", buildCapability.getName()).build(), CommonUtil.getSingleInt()).get(0);
     if (matchingProjects > 0) {
       throw new IllegalArgumentException("A build capability with the same name already exists");
     }
@@ -66,37 +54,25 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
         ":wd_chrome_enable_network, :wd_chrome_enable_page, :wd_firefox_log_level,\n" +
         ":wd_brw_start_maximize, :zluser_id, :create_date) RETURNING bt_build_capability_id;";
   
-    addBuildCapsParams(params, buildCapability);
-    params.put("create_date", new SqlParameterValue(Types.TIMESTAMP_WITH_TIMEZONE,
-        DateTimeUtil.getCurrentUTC()));
-  
-    namedParams = new MapSqlParameterSource(params);
-  
-    return Optional.ofNullable(jdbc.queryForObject(sql, namedParams, Integer.class));
+    return jdbc.query(sql,
+        getBuildCapsParams(buildCapability, userId, true),
+        CommonUtil.getSingleInt()).get(0);
   }
   
   @Override
-  public int updateCapability(BuildCapability buildCapability, int userId) {
+  public void updateCapability(BuildCapability buildCapability, int userId) {
     Preconditions.checkNotNull(buildCapability, "buildCapability can't be null");
-    Preconditions.checkArgument(buildCapability.getId() > 0, "buildCapabilityId must be valid");
+    Preconditions.checkArgument(buildCapability.getId() > 0, "buildCapabilityId must be given");
   
     // first check whether there is a duplicate
     String sql = "SELECT count(*) FROM bt_build_capability WHERE zluser_id = :zluser_id" +
         " AND bt_build_capability_id <> :bt_build_capability_id AND name ILIKE lower(:name);";
   
-    Map<String, SqlParameterValue> params = new HashMap<>(CollectionUtil.getInitialCapacity(25));
-  
-    params.put("name", new SqlParameterValue(Types.OTHER, buildCapability.getName()));
-  
-    params.put("zluser_id", new SqlParameterValue(Types.INTEGER, userId));
-  
-    params.put("bt_build_capability_id", new SqlParameterValue(Types.INTEGER,
-        buildCapability.getId()));
-  
-    SqlParameterSource namedParams = new MapSqlParameterSource(params);
-  
-    Integer matchingProjects = jdbc.queryForObject(sql, namedParams, Integer.class);
-    Objects.requireNonNull(matchingProjects);
+    int matchingProjects = jdbc.query(sql,
+        new SqlParamsBuilder(userId)
+            .withOther("name", buildCapability.getName())
+            .withInteger("bt_build_capability_id", buildCapability.getId()).build(),
+        CommonUtil.getSingleInt()).get(0);
     if (matchingProjects > 0) {
       throw new IllegalArgumentException("A build capability with the same name already exists");
     }
@@ -126,11 +102,8 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
         "wd_brw_start_maximize = :wd_brw_start_maximize\n" +
         "WHERE bt_build_capability_id = :bt_build_capability_id";
   
-    addBuildCapsParams(params, buildCapability);
-    
-    namedParams = new MapSqlParameterSource(params);
-    
-    return jdbc.update(sql, namedParams);
+    int result = jdbc.update(sql, getBuildCapsParams(buildCapability, userId, false));
+    CommonUtil.validateSingleRowDbCommit(result);
   }
   
   @Override
@@ -139,11 +112,8 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
         " bt_build_capability_id" +
         ", name" +
         " FROM bt_build_capability WHERE zluser_id = :zluser_id;";
-    
-    SqlParameterSource namedParams = new MapSqlParameterSource("zluser_id",
-        new SqlParameterValue(Types.INTEGER, userId));
   
-    return jdbc.query(sql, namedParams, (rs, rowNum) ->
+    return jdbc.query(sql, new SqlParamsBuilder(userId).build(), (rs, rowNum) ->
         new BuildCapabilityIdentifier()
             .setId(rs.getInt("bt_build_capability_id"))
             .setName(rs.getString("name")));
@@ -180,13 +150,10 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
         "wd_brw_start_maximize\n" +
         "FROM bt_build_capability\n" +
         "WHERE bt_build_capability_id = :bt_build_capability_id AND zluser_id = :zluser_id";
-    
-    Map<String, SqlParameterValue> params = new HashMap<>(CollectionUtil.getInitialCapacity(2));
-    params.put("zluser_id", new SqlParameterValue(Types.INTEGER, userId));
-    params.put("bt_build_capability_id", new SqlParameterValue(Types.INTEGER, buildCapabilityId));
-    SqlParameterSource namedParams = new MapSqlParameterSource(params);
   
-    List<BuildCapability> buildCapabilities = jdbc.query(sql, namedParams, (rs, rowNum) ->
+    List<BuildCapability> buildCapabilities = jdbc.query(sql,
+        new SqlParamsBuilder(userId)
+            .withInteger("bt_build_capability_id", buildCapabilityId).build(), (rs, rowNum) ->
         new BuildCapability()
             .setName(rs.getString("name"))
             .setServerOs(rs.getString("server_os"))
@@ -219,64 +186,57 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
   }
   
   @Override
-  public int deleteCapability(int buildCapabilityId, int userId) {
+  public void deleteCapability(int buildCapabilityId, int userId) {
     Preconditions.checkArgument(buildCapabilityId > 0, "buildCapabilityId is required");
     
     String sql = "DELETE FROM bt_build_capability\n" +
         "WHERE bt_build_capability_id = :bt_build_capability_id AND zluser_id = :zluser_id";
   
-    Map<String, SqlParameterValue> params = new HashMap<>(CollectionUtil.getInitialCapacity(2));
-    params.put("zluser_id", new SqlParameterValue(Types.INTEGER, userId));
-    params.put("bt_build_capability_id", new SqlParameterValue(Types.INTEGER, buildCapabilityId));
-    SqlParameterSource namedParams = new MapSqlParameterSource(params);
-  
-    return jdbc.update(sql, namedParams);
+    int result = jdbc.update(sql, new SqlParamsBuilder(userId)
+        .withInteger("bt_build_capability_id", buildCapabilityId).build());
+    CommonUtil.validateSingleRowDbCommit(result);
   }
   
-  private void addBuildCapsParams(Map<String, SqlParameterValue> params,
-                                  BuildCapability buildCapability) {
-    params.put("server_os", new SqlParameterValue(Types.VARCHAR, buildCapability.getServerOs()));
-    params.put("wd_browser_name",
-        new SqlParameterValue(Types.VARCHAR, buildCapability.getWdBrowserName()));
-    params.put("wd_browser_version",
-        new SqlParameterValue(Types.VARCHAR, buildCapability.getWdBrowserVersion()));
-    params.put("wd_platform_name",
-        new SqlParameterValue(Types.VARCHAR, buildCapability.getWdPlatformName()));
-    params.put("wd_accept_insecure_certs",
-        new SqlParameterValue(Types.BOOLEAN, buildCapability.isWdAcceptInsecureCerts()));
-    params.put("wd_timeouts_script",
-        new SqlParameterValue(Types.INTEGER, buildCapability.getWdTimeoutsScript()));
-    params.put("wd_timeouts_page_load",
-        new SqlParameterValue(Types.INTEGER, buildCapability.getWdTimeoutsPageLoad()));
-    params.put("wd_timeouts_element_access",
-        new SqlParameterValue(Types.INTEGER, buildCapability.getWdTimeoutsElementAccess()));
-    params.put("wd_strict_file_interactability",
-        new SqlParameterValue(Types.BOOLEAN, buildCapability.isWdStrictFileInteractability()));
-    params.put("wd_unhandled_prompt_behavior",
-        new SqlParameterValue(Types.OTHER, buildCapability.getWdUnhandledPromptBehavior()));
-    params.put("wd_ie_element_scroll_behavior",
-        new SqlParameterValue(Types.VARCHAR, buildCapability.getWdIeElementScrollBehavior()));
-    params.put("wd_ie_enable_persistent_hovering",
-        new SqlParameterValue(Types.BOOLEAN, buildCapability.isWdIeEnablePersistentHovering()));
-    params.put("wd_ie_require_window_focus",
-        new SqlParameterValue(Types.BOOLEAN, buildCapability.isWdIeRequireWindowFocus()));
-    params.put("wd_ie_disable_native_events",
-        new SqlParameterValue(Types.BOOLEAN, buildCapability.isWdIeDisableNativeEvents()));
-    params.put("wd_ie_destructively_ensure_clean_session", new SqlParameterValue(Types.BOOLEAN,
-        buildCapability.isWdIeDestructivelyEnsureCleanSession()));
-    params.put("wd_ie_log_level",
-        new SqlParameterValue(Types.VARCHAR, buildCapability.getWdIeLogLevel()));
-    params.put("wd_chrome_verbose_logging",
-        new SqlParameterValue(Types.BOOLEAN, buildCapability.isWdChromeVerboseLogging()));
-    params.put("wd_chrome_silent_output",
-        new SqlParameterValue(Types.BOOLEAN, buildCapability.isWdChromeSilentOutput()));
-    params.put("wd_chrome_enable_network",
-        new SqlParameterValue(Types.BOOLEAN, buildCapability.isWdChromeEnableNetwork()));
-    params.put("wd_chrome_enable_page",
-        new SqlParameterValue(Types.BOOLEAN, buildCapability.isWdChromeEnablePage()));
-    params.put("wd_firefox_log_level",
-        new SqlParameterValue(Types.VARCHAR, buildCapability.getWdFirefoxLogLevel()));
-    params.put("wd_brw_start_maximize",
-        new SqlParameterValue(Types.BOOLEAN, buildCapability.isWdBrwStartMaximize()));
+  private SqlParameterSource getBuildCapsParams(BuildCapability buildCapability,
+                                                int userId,
+                                                boolean addCreateDate) {
+    SqlParamsBuilder builder = new SqlParamsBuilder(userId);
+    if (buildCapability.getId() > 0) {
+      builder.withInteger("bt_build_capability_id", buildCapability.getId());
+    }
+    if (addCreateDate) {
+      builder.withCreateDate();
+    }
+    builder
+        .withOther("name", buildCapability.getName())
+        .withVarchar("server_os", buildCapability.getServerOs())
+        .withVarchar("wd_browser_name", buildCapability.getWdBrowserName())
+        .withVarchar("wd_browser_version", buildCapability.getWdBrowserVersion())
+        .withVarchar("wd_platform_name", buildCapability.getWdPlatformName())
+        .withBoolean("wd_accept_insecure_certs", buildCapability.isWdAcceptInsecureCerts())
+        .withInteger("wd_timeouts_script", buildCapability.getWdTimeoutsScript())
+        .withInteger("wd_timeouts_page_load", buildCapability.getWdTimeoutsPageLoad())
+        .withInteger("wd_timeouts_element_access", buildCapability.getWdTimeoutsElementAccess())
+        .withBoolean("wd_strict_file_interactability",
+            buildCapability.isWdStrictFileInteractability())
+        .withOther("wd_unhandled_prompt_behavior", buildCapability.getWdUnhandledPromptBehavior())
+        .withVarchar("wd_ie_element_scroll_behavior",
+            buildCapability.getWdIeElementScrollBehavior())
+        .withBoolean("wd_ie_enable_persistent_hovering",
+            buildCapability.isWdIeEnablePersistentHovering())
+        .withBoolean("wd_ie_require_window_focus",
+            buildCapability.isWdIeRequireWindowFocus())
+        .withBoolean("wd_ie_disable_native_events",
+            buildCapability.isWdIeDisableNativeEvents())
+        .withBoolean("wd_ie_destructively_ensure_clean_session",
+            buildCapability.isWdIeDestructivelyEnsureCleanSession())
+        .withVarchar("wd_ie_log_level", buildCapability.getWdIeLogLevel())
+        .withBoolean("wd_chrome_verbose_logging", buildCapability.isWdChromeVerboseLogging())
+        .withBoolean("wd_chrome_silent_output", buildCapability.isWdChromeSilentOutput())
+        .withBoolean("wd_chrome_enable_network", buildCapability.isWdChromeEnableNetwork())
+        .withBoolean("wd_chrome_enable_page", buildCapability.isWdChromeEnablePage())
+        .withVarchar("wd_firefox_log_level", buildCapability.getWdFirefoxLogLevel())
+        .withBoolean("wd_brw_start_maximize", buildCapability.isWdBrwStartMaximize());
+    return builder.build();
   }
 }

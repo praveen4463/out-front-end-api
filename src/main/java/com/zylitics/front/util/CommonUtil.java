@@ -1,9 +1,9 @@
 package com.zylitics.front.util;
 
 import com.google.common.base.Strings;
+import org.springframework.jdbc.core.RowMapper;
 
 import javax.annotation.Nullable;
-import java.util.Optional;
 
 public class CommonUtil {
   
@@ -30,5 +30,13 @@ public class CommonUtil {
     if (result != 1) {
       throw new RuntimeException("Expected one row to be affected but it was " + result);
     }
+  }
+  
+  public static RowMapper<Integer> getSingleInt() {
+    return ((rs, rowNum) -> rs.getInt(1));
+  }
+  
+  public static RowMapper<String> getSingleString() {
+    return ((rs, rowNum) -> rs.getString(1));
   }
 }

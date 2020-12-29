@@ -16,10 +16,12 @@ public class UserFromProxy {
     this.id = id;
   }
   
+  @SuppressWarnings("unused")
   public String getEmail() {
     return email;
   }
   
+  @SuppressWarnings("unused")
   public void setEmail(String email) {
     this.email = email;
   }

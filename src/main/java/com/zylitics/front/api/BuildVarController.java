@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("${app-short-version}/projects/{projectId}/buildVars")
@@ -28,9 +27,9 @@ public class BuildVarController extends AbstractController {
       @PathVariable @Min(1) int projectId,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
   ) {
-    Optional<Integer> id = buildVarProvider.newBuildVar(buildVar, projectId,
+    int id = buildVarProvider.newBuildVar(buildVar, projectId,
         getUserId(userInfo));
-    return ResponseEntity.ok(id.orElseThrow(RuntimeException :: new));
+    return ResponseEntity.ok(id);
   }
   
   @SuppressWarnings("unused")
@@ -49,9 +48,10 @@ public class BuildVarController extends AbstractController {
   public ResponseEntity<Void> deleteBuildVar(
       @PathVariable @Min(1) int buildVarId,
       @RequestParam boolean isPrimary,
+      @PathVariable @Min(1) int projectId,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
   ) {
-    buildVarProvider.deleteBuildVar(buildVarId, isPrimary, getUserId(userInfo));
+    buildVarProvider.deleteBuildVar(buildVarId, isPrimary, projectId, getUserId(userInfo));
     return ResponseEntity.ok().build();
   }
   

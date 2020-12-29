@@ -7,5 +7,6 @@ public interface SecretsManager extends Closeable {
   
   String getSecretAsPlainText(String secretCloudFileName);
   
+  @SuppressWarnings("unused")
   void reAcquireClientAfterClose() throws IOException;
 }

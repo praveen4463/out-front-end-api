@@ -7,6 +7,7 @@ import com.zylitics.front.model.FileIdentifier;
 import com.zylitics.front.provider.FileProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.constraints.Min;
@@ -23,6 +24,16 @@ public class FileController extends AbstractController {
   @Autowired
   public FileController(FileProvider fileProvider) {
     this.fileProvider = fileProvider;
+  }
+  
+  @SuppressWarnings("unused")
+  @PostMapping
+  public ResponseEntity<File> newFile(
+      @Validated @RequestBody File file,
+      @PathVariable @Min(1) int projectId,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
+  ) {
+    return ResponseEntity.ok(fileProvider.newFile(file, projectId, getUserId(userInfo)));
   }
   
   @GetMapping
@@ -44,5 +55,25 @@ public class FileController extends AbstractController {
           .splitToList(fileIdsFilter).stream().map(Integer::parseInt).collect(Collectors.toList());
     }
     return ResponseEntity.ok(fileProvider.getFilesWithTests(fIds, getUserId(userInfo)));
+  }
+  
+  @SuppressWarnings("unused")
+  @PatchMapping
+  public ResponseEntity<Void> renameFile(
+      @Validated @RequestBody File file,
+      @PathVariable @Min(1) int projectId,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
+  ) {
+    fileProvider.renameFile(file, projectId, getUserId(userInfo));
+    return ResponseEntity.ok().build();
+  }
+  
+  @DeleteMapping("/{fileId}")
+  public ResponseEntity<Void> deleteFile(
+      @PathVariable @Min(1) int fileId,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
+  ) {
+    fileProvider.deleteFile(fileId, getUserId(userInfo));
+    return ResponseEntity.ok().build();
   }
 }
