@@ -1,6 +1,6 @@
 package com.zylitics.front.model;
 
-public class Error {
+public class ApiError {
   
   private String message;
   
@@ -9,7 +9,7 @@ public class Error {
     return message;
   }
   
-  public Error setMessage(String message) {
+  public ApiError setMessage(String message) {
     this.message = message;
     return this;
   }

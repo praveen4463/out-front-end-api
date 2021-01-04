@@ -2,6 +2,7 @@ package com.zylitics.front.dao;
 
 import com.google.common.base.Preconditions;
 import com.zylitics.front.model.TestVersion;
+import com.zylitics.front.model.TestVersionRename;
 import com.zylitics.front.provider.TestVersionProvider;
 import com.zylitics.front.util.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +10,10 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.sql.JDBCType;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 @Repository
@@ -70,17 +75,15 @@ public class DaoTestVersionProvider extends AbstractDaoProvider implements TestV
   }
   
   @Override
-  public void renameVersion(TestVersion testVersion, int userId) {
-    Preconditions.checkArgument(testVersion.getId() > 0, "versionId is required");
-  
+  public void renameVersion(int versionId, TestVersionRename testVersionRename, int userId) {
     String sql = "SELECT count(*) FROM bt_test_version\n" +
         "WHERE bt_test_version_id <> :bt_test_version_id\n" +
         "AND name ILIKE lower(:name) AND bt_test_id = :bt_test_id;";
     int matchingNames = jdbc.query(sql, new SqlParamsBuilder()
-        .withInteger("bt_test_version_id", testVersion.getId())
-        .withVarchar("name", testVersion.getName())
-        .withInteger("bt_test_id", testVersion.getTestId()).build(), CommonUtil.getSingleInt())
-        .get(0);
+        .withInteger("bt_test_version_id", versionId)
+        .withVarchar("name", testVersionRename.getName())
+        .withInteger("bt_test_id", testVersionRename.getTestId())
+        .build(), CommonUtil.getSingleInt()).get(0);
     if (matchingNames > 0) {
       throw new IllegalArgumentException("Can't rename version, given name already exists");
     }
@@ -88,11 +91,60 @@ public class DaoTestVersionProvider extends AbstractDaoProvider implements TestV
         "FROM bt_test AS t INNER JOIN bt_file AS f ON (t.bt_file_id = f.bt_file_id)\n" +
         "INNER JOIN bt_project p ON (f.bt_project_id = p.bt_project_id)\n" +
         "WHERE bt_test_version_id = :bt_test_version_id AND v.bt_test_id = t.bt_test_id\n" +
-        "AND p.zluser_id = :zluser_id;";
+        "AND p.zluser_id = :zluser_id";
     int result = jdbc.update(sql, new SqlParamsBuilder(userId)
-        .withVarchar("name", testVersion.getName())
-        .withInteger("bt_test_version_id", testVersion.getId()).build());
+        .withVarchar("name", testVersionRename.getName())
+        .withInteger("bt_test_version_id", versionId).build());
     CommonUtil.validateSingleRowDbCommit(result);
+  }
+  
+  @Override
+  public void updateCode(int versionId, String code, int userId) {
+    String sql = "UPDATE bt_test_version AS v SET code = :code\n" +
+        "FROM bt_test AS t INNER JOIN bt_file AS f ON (t.bt_file_id = f.bt_file_id)\n" +
+        "INNER JOIN bt_project p ON (f.bt_project_id = p.bt_project_id)\n" +
+        "WHERE bt_test_version_id = :bt_test_version_id AND v.bt_test_id = t.bt_test_id\n" +
+        "AND p.zluser_id = :zluser_id";
+    int result = jdbc.update(sql, new SqlParamsBuilder(userId)
+        .withOther("code", code)
+        .withInteger("bt_test_version_id", versionId).build());
+    CommonUtil.validateSingleRowDbCommit(result);
+  }
+  
+  @Override
+  public String getCode(int versionId, int userId) {
+    String sql = "SELECT code FROM bt_test_version v\n" +
+        "INNER JOIN bt_test AS t ON (v.bt_test_id = t.bt_test_id)\n" +
+        "INNER JOIN bt_file AS f ON (t.bt_file_id = f.bt_file_id)\n" +
+        "INNER JOIN bt_project p ON (f.bt_project_id = p.bt_project_id)\n" +
+        "WHERE bt_test_version_id = :bt_test_version_id AND p.zluser_id = :zluser_id";
+    List<String> existingCodes = jdbc.query(sql, new SqlParamsBuilder(userId)
+        .withInteger("bt_test_version_id", versionId).build(), CommonUtil.getSingleString());
+    if (existingCodes.size() == 0) {
+      throw new RuntimeException("Given versionId " + versionId + " wasn't found");
+    }
+    return existingCodes.get(0);
+  }
+  
+  @Override
+  public Map<Integer, String> getCodes(List<Integer> versionIds, int userId) {
+    Preconditions.checkArgument(versionIds.size() > 0, "versionIds can't be empty");
+    Map<Integer, String> codes = new HashMap<>();
+    String sql = "SELECT bt_test_version_id, code FROM bt_test_version AS v\n" +
+        "INNER JOIN bt_test AS t ON (v.bt_test_id = t.bt_test_id)\n" +
+        "INNER JOIN bt_file AS f ON (t.bt_file_id = f.bt_file_id)\n" +
+        "INNER JOIN bt_project p ON (f.bt_project_id = p.bt_project_id)\n" +
+        "WHERE bt_test_version_id IN (SELECT * FROM unnest(:bt_test_version_ids))\n" +
+        "AND p.zluser_id = :zluser_id";
+    jdbc.query(sql, new SqlParamsBuilder(userId)
+        .withArray("bt_test_version_ids", versionIds.toArray(), JDBCType.INTEGER).build(),
+        (rs -> {
+          codes.put(rs.getInt("bt_test_version_id"), rs.getString("code"));
+        }));
+    if (codes.size() != versionIds.size()) {
+      throw new RuntimeException("Some of given versionIds " + versionIds + " weren't found");
+    }
+    return codes;
   }
   
   @Override

@@ -3,7 +3,7 @@ package com.zylitics.front.api;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zylitics.front.exception.UnauthorizedException;
-import com.zylitics.front.model.Error;
+import com.zylitics.front.model.ApiError;
 import com.zylitics.front.model.UserFromProxy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +40,7 @@ public abstract class AbstractController {
    */
   @SuppressWarnings("unused")
   @ExceptionHandler
-  public ResponseEntity<Error> handleExceptions(MethodArgumentNotValidException ex) {
+  public ResponseEntity<ApiError> handleExceptions(MethodArgumentNotValidException ex) {
     LOG.debug("An ArgumentNotValid handler was called");
     
     // Don't send actual error message on bad request as well cause it would be us if that binding is failed,
@@ -54,7 +54,7 @@ public abstract class AbstractController {
   //  trace and relay only those messages. We throw this mostly when some validation fails.
   @SuppressWarnings("unused")
   @ExceptionHandler
-  public ResponseEntity<Error> handleExceptions(IllegalArgumentException ex) {
+  public ResponseEntity<ApiError> handleExceptions(IllegalArgumentException ex) {
     LOG.debug("An IllegalArgumentException handler was called");
     
     // use 422 on validation failure https://stackoverflow.com/a/25489597/1624454
@@ -63,7 +63,7 @@ public abstract class AbstractController {
   
   @SuppressWarnings("unused")
   @ExceptionHandler
-  public ResponseEntity<Error> handleExceptions(UnauthorizedException ex) {
+  public ResponseEntity<ApiError> handleExceptions(UnauthorizedException ex) {
     LOG.debug("An UnauthorizedException handler was called");
     
     return processErrResponse(ex, HttpStatus.UNAUTHORIZED, ex.getMessage());
@@ -78,7 +78,7 @@ public abstract class AbstractController {
    */
   @SuppressWarnings("unused")
   @ExceptionHandler
-  public ResponseEntity<Error> handleExceptions(Exception ex) {
+  public ResponseEntity<ApiError> handleExceptions(Exception ex) {
     LOG.debug("An Exception handler was called");
   
     // Note: original error is not sent to client as this api is internal and we don't want end user
@@ -86,8 +86,8 @@ public abstract class AbstractController {
     return processErrResponse(ex, HttpStatus.INTERNAL_SERVER_ERROR, MASKED_ERROR);
   }
   
-  private ResponseEntity<Error> processErrResponse(Throwable ex, HttpStatus status,
-                                                           String userErrorMsg) {
+  private ResponseEntity<ApiError> processErrResponse(Throwable ex, HttpStatus status,
+                                                      String userErrorMsg) {
     // Log exception.
     // TODO: we'll have to see what type of errors we may get here and may require more information
     //  from handlers to better debug error causes, for example the state of program when
@@ -96,6 +96,6 @@ public abstract class AbstractController {
     
     return ResponseEntity
         .status(status)
-        .body(new Error().setMessage(userErrorMsg));
+        .body(new ApiError().setMessage(userErrorMsg));
   }
 }

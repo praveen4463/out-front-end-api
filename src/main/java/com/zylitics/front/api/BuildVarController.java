@@ -60,7 +60,7 @@ public class BuildVarController extends AbstractController {
       @PathVariable @Min(1) int projectId,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
   ) {
-    return ResponseEntity.ok(buildVarProvider.getBuildVars(projectId, getUserId(userInfo)));
+    return ResponseEntity.ok(buildVarProvider.getBuildVars(projectId, getUserId(userInfo), false));
   }
   
   @Validated

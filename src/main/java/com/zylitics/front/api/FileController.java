@@ -5,6 +5,7 @@ import com.google.common.base.Strings;
 import com.zylitics.front.model.File;
 import com.zylitics.front.model.FileIdentifier;
 import com.zylitics.front.provider.FileProvider;
+import com.zylitics.front.util.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -49,11 +50,7 @@ public class FileController extends AbstractController {
       @RequestParam(required = false) String fileIdsFilter,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
   ) {
-    List<Integer> fIds = new ArrayList<>();
-    if (!Strings.isNullOrEmpty(fileIdsFilter)) {
-      fIds = Splitter.on(",").omitEmptyStrings().trimResults()
-          .splitToList(fileIdsFilter).stream().map(Integer::parseInt).collect(Collectors.toList());
-    }
+    List<Integer> fIds = CommonUtil.commaDelToNumericList(fileIdsFilter);
     return ResponseEntity.ok(fileProvider.getFilesWithTests(fIds, getUserId(userInfo)));
   }
   

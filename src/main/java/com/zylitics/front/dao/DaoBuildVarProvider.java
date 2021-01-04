@@ -9,7 +9,9 @@ import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.sql.JDBCType;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
 
@@ -36,7 +38,7 @@ public class DaoBuildVarProvider extends AbstractDaoProvider implements BuildVar
     
     // check dupe build var
     String checkExistenceSql = "SELECT count(*) FROM zwl_build_variables\n" +
-        "WHERE key ILIKE lower(:key) AND value = :value AND bt_project_id = :bt_project_id;";
+        "WHERE key ILIKE lower(:key) AND value = :value AND bt_project_id = :bt_project_id";
     int matchingVar = jdbc.query(checkExistenceSql,
         new SqlParamsBuilder()
             .withProject(projectId)
@@ -50,7 +52,7 @@ public class DaoBuildVarProvider extends AbstractDaoProvider implements BuildVar
   
     // check whether given build var's key already exists
     String checkKeySql = "SELECT key FROM zwl_build_variables\n" +
-        "WHERE bt_project_id = :bt_project_id AND key ILIKE lower(:key) group by key;";
+        "WHERE bt_project_id = :bt_project_id AND key ILIKE lower(:key) group by key";
     List<String> matchingKeys = jdbc.query(checkKeySql,
         new SqlParamsBuilder()
             .withProject(projectId)
@@ -76,7 +78,7 @@ public class DaoBuildVarProvider extends AbstractDaoProvider implements BuildVar
     String insertSql = "INSERT\n" +
         "INTO zwl_build_variables (key, value, isPrimary, bt_project_id)\n" +
         "VALUES (:key, :value, :isPrimary, :bt_project_id)\n" +
-        "RETURNING zwl_build_variables_id;";
+        "RETURNING zwl_build_variables_id";
     
     SqlParameterSource insertSqlParams = new SqlParamsBuilder()
         .withProject(projectId)
@@ -98,7 +100,7 @@ public class DaoBuildVarProvider extends AbstractDaoProvider implements BuildVar
       // about any checked exceptions that don't rollback this transaction (default behavior)
       //assign resetting current primary sql
       String resetCurrentPrimarySql = "UPDATE zwl_build_variables SET isPrimary = false\n" +
-          "WHERE key = :key AND isPrimary = true;";
+          "WHERE key = :key AND isPrimary = true";
       SqlParameterSource resetCurrentPrimaryParams =
           new SqlParamsBuilder().withVarchar("key", clonedBuildVar.getKey()).build();
       int updateResult = jdbc.update(resetCurrentPrimarySql, resetCurrentPrimaryParams);
@@ -113,14 +115,42 @@ public class DaoBuildVarProvider extends AbstractDaoProvider implements BuildVar
   }
   
   @Override
-  public List<BuildVar> getBuildVars(int projectId, int userId) {
-    String sql = "SELECT\n" +
+  public List<BuildVar> getBuildVars(int projectId, int userId, boolean onlyPrimary) {
+    StringBuilder sql = new StringBuilder("SELECT\n" +
         "b.zwl_build_variables_id, b.key, b.value, b.isPrimary FROM zwl_build_variables AS b\n" +
         "INNER JOIN bt_project AS p ON (b.bt_project_id = p.bt_project_id)\n" +
-        "WHERE b.bt_project_id = :bt_project_id AND p.zluser_id = :zluser_id;";
+        "WHERE b.bt_project_id = :bt_project_id AND p.zluser_id = :zluser_id");
+    if (onlyPrimary) {
+      sql.append("\nAND b.isPrimary = true");
+    }
     
     SqlParameterSource namedParams = new SqlParamsBuilder(projectId, userId).build();
     
+    return jdbc.query(sql.toString(), namedParams, (rs, rowNum) -> new BuildVar()
+        .setId(rs.getInt("zwl_build_variables_id"))
+        .setKey(rs.getString("key"))
+        .setValue(rs.getString("value"))
+        .setIsPrimary(rs.getBoolean("isPrimary")));
+  }
+  
+  @Override
+  public List<BuildVar> getPrimaryBuildVarsOverridingGiven(int projectId, int userId,
+                                                           Map<String, Integer> overrideKeyId) {
+    Preconditions.checkArgument(overrideKeyId.size() > 0, "overrideKeyId is empty");
+    String sql = "SELECT\n" +
+        "b.zwl_build_variables_id, b.key, b.value, b.isPrimary FROM zwl_build_variables AS b\n" +
+        "INNER JOIN bt_project AS p ON (b.bt_project_id = p.bt_project_id)\n" +
+        "WHERE b.bt_project_id = :bt_project_id AND p.zluser_id = :zluser_id\n" +
+        "AND b.isPrimary = true AND b.key NOT IN (SELECT * FROM unnest(:overrideKeys))\n" +
+        "UNION ALL\n" +
+        "SELECT\n" +
+        "b.zwl_build_variables_id, b.key, b.value, b.isPrimary FROM zwl_build_variables AS b\n" +
+        "INNER JOIN bt_project AS p ON (b.bt_project_id = p.bt_project_id)\n" +
+        "WHERE p.zluser_id = :zluser_id\n" +
+        "AND zwl_build_variables_id IN (SELECT * FROM unnest(:overrideIds))";
+    SqlParameterSource namedParams = new SqlParamsBuilder(projectId, userId)
+        .withArray("overrideKeys", overrideKeyId.keySet().toArray(), JDBCType.VARCHAR)
+        .withArray("overrideIds", overrideKeyId.values().toArray(), JDBCType.INTEGER).build();
     return jdbc.query(sql, namedParams, (rs, rowNum) -> new BuildVar()
         .setId(rs.getInt("zwl_build_variables_id"))
         .setKey(rs.getString("key"))

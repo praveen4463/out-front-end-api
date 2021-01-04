@@ -91,7 +91,7 @@ public class DaoFileProvider extends AbstractDaoProvider implements FileProvider
       sqlFile.append("AND f.bt_file_id IN (select * from unnest(:fileIds));");
       fileParamsBuilder.withArray("fileIds", fileIdsFilter.toArray(), JDBCType.INTEGER);
     } else {
-      sqlFile.append("LIMIT 50;"); // limit to 50 files when no filter is given, currently no
+      sqlFile.append("LIMIT 10;"); // limit to 10 files when no filter is given, currently no
       // nextPageToken is facilitated here. TODO: add nextPageToken here
     }
     

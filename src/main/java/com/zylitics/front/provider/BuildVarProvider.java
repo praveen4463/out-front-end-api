@@ -3,12 +3,16 @@ package com.zylitics.front.provider;
 import com.zylitics.front.model.BuildVar;
 
 import java.util.List;
+import java.util.Map;
 
 public interface BuildVarProvider {
   
   int newBuildVar(BuildVar buildVar, int projectId, int userId);
   
-  List<BuildVar> getBuildVars (int projectId, int userId);
+  List<BuildVar> getBuildVars(int projectId, int userId, boolean onlyPrimary);
+  
+  List<BuildVar> getPrimaryBuildVarsOverridingGiven(int projectId, int userId,
+                                                    Map<String, Integer> overrideKeyId);
   
   void updateBuildVar(String columnId, String value, int buildVarId, int projectId, int userId);
   
