@@ -14,6 +14,10 @@ public interface BuildVarProvider {
   List<BuildVar> getPrimaryBuildVarsOverridingGiven(int projectId, int userId,
                                                     Map<String, Integer> overrideKeyId);
   
+  void capturePrimaryBuildVarsOverridingGiven(int projectId,
+                                              Map<String, Integer> overrideKeyId,
+                                              int buildId);
+  
   void updateBuildVar(String columnId, String value, int buildVarId, int projectId, int userId);
   
   void deleteBuildVar(int buildVarId, boolean isPrimary, int projectId, int userId);

@@ -41,6 +41,10 @@ public class CommonUtil {
     return ((rs, rowNum) -> rs.getInt(1));
   }
   
+  public static RowMapper<Long> getSingleLong() {
+    return ((rs, rowNum) -> rs.getLong(1));
+  }
+  
   public static RowMapper<String> getSingleString() {
     return ((rs, rowNum) -> rs.getString(1));
   }

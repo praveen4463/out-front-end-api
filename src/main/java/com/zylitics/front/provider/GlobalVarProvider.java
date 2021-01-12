@@ -3,6 +3,7 @@ package com.zylitics.front.provider;
 import com.zylitics.front.model.GlobalVar;
 
 import java.util.List;
+import java.util.Map;
 
 public interface GlobalVarProvider {
   
@@ -11,6 +12,8 @@ public interface GlobalVarProvider {
   List<GlobalVar> getGlobalVars(int projectId, int userId);
   
   void updateValue(String value, int globalVarId, int userId);
+  
+  void captureGlobalVars(int projectId, int buildId);
   
   void deleteGlobalVar(int globalVarId, int userId);
 }

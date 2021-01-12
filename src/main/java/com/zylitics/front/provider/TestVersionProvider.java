@@ -18,5 +18,9 @@ public interface TestVersionProvider {
   
   Map<Integer, String> getCodes(List<Integer> versionIds, int userId);
   
+  boolean anyVersionHasBlankCode(List<Integer> versionIds, int userId);
+  
+  void captureVersions(List<Integer> versionIds, int buildId);
+  
   void deleteVersion(int versionId, int userId);
 }

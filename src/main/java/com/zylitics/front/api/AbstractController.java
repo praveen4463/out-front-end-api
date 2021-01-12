@@ -94,8 +94,12 @@ public abstract class AbstractController {
     //  this exception occurred, the received parameters from client, etc.
     LOG.error("", ex);
     
+    return sendError(status, userErrorMsg);
+  }
+  
+  protected ResponseEntity<ApiError> sendError(HttpStatus status, String errorMsg) {
     return ResponseEntity
         .status(status)
-        .body(new ApiError().setMessage(userErrorMsg));
+        .body(new ApiError().setMessage(errorMsg));
   }
 }

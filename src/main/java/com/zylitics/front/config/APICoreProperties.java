@@ -55,6 +55,11 @@ public class APICoreProperties {
   
   public Storage getStorage() {return storage;}
   
+  @Valid
+  private final Services services = new Services();
+  
+  public Services getServices() { return services; }
+  
   public static class DataSource {
     
     @NotBlank
@@ -349,6 +354,61 @@ public class APICoreProperties {
     public void setMaxCommonFileSizeMb(Integer maxCommonFileSizeMb) {
       if (this.maxCommonFileSizeMb == null) {
         this.maxCommonFileSizeMb = maxCommonFileSizeMb;
+      }
+    }
+  }
+  
+  public static class Services {
+    
+    @NotBlank
+    private String wzgpEndpoint;
+    
+    @NotBlank
+    private String wzgpVersion;
+    
+    @NotBlank
+    private String btbrVersion;
+    
+    @NotBlank
+    private Integer btbrPort;
+    
+    public String getWzgpEndpoint() {
+      return wzgpEndpoint;
+    }
+    
+    public void setWzgpEndpoint(String wzgpEndpoint) {
+      if (this.wzgpEndpoint == null) {
+        this.wzgpEndpoint = wzgpEndpoint;
+      }
+    }
+    
+    public String getWzgpVersion() {
+      return wzgpVersion;
+    }
+    
+    public void setWzgpVersion(String wzgpVersion) {
+      if (this.wzgpVersion == null) {
+        this.wzgpVersion = wzgpVersion;
+      }
+    }
+    
+    public String getBtbrVersion() {
+      return btbrVersion;
+    }
+    
+    public void setBtbrVersion(String btbrVersion) {
+      if (this.btbrVersion == null) {
+        this.btbrVersion = btbrVersion;
+      }
+    }
+    
+    public int getBtbrPort() {
+      return btbrPort;
+    }
+    
+    public void setBtbrPort(Integer btbrPort) {
+      if (this.btbrPort == null) {
+        this.btbrPort = btbrPort;
       }
     }
   }

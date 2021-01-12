@@ -159,6 +159,28 @@ public class DaoBuildVarProvider extends AbstractDaoProvider implements BuildVar
   }
   
   @Override
+  public void capturePrimaryBuildVarsOverridingGiven(int projectId,
+                                                     Map<String, Integer> overrideKeyId,
+                                                     int buildId) {
+    String sql = "INSERT INTO bt_build_zwl_build_variables (bt_build_id, key, value)\n" +
+        "SELECT :bt_build_id, key, value FROM zwl_build_variables\n" +
+        "WHERE bt_project_id = :bt_project_id\n" +
+        "AND isPrimary = true AND key NOT IN (SELECT * FROM unnest(:overrideKeys))\n" +
+        "UNION ALL\n" +
+        "SELECT :bt_build_id, key, value FROM zwl_build_variables\n" +
+        "WHERE zwl_build_variables_id IN (SELECT * FROM unnest(:overrideIds))";
+    SqlParameterSource namedParams = new SqlParamsBuilder()
+        .withProject(projectId)
+        .withInteger("bt_build_id", buildId)
+        .withArray("overrideKeys", overrideKeyId.keySet().toArray(), JDBCType.VARCHAR)
+        .withArray("overrideIds", overrideKeyId.values().toArray(), JDBCType.INTEGER).build();
+    int result = jdbc.update(sql, namedParams);
+    if (result < overrideKeyId.size()) {
+      throw new RuntimeException("Couldn't insert build vars properly");
+    }
+  }
+  
+  @Override
   public void updateBuildVar(String columnId, String value, int buildVarId, int projectId,
                             int userId) {
     if (columnId.equals("value")) {

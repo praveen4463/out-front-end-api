@@ -10,6 +10,8 @@ public interface BuildCapabilityProvider {
   
   int saveNewCapability(BuildCapability buildCapability, int userId);
   
+  void captureCapability(int buildCapabilityId, int buildId);
+  
   void updateCapability(BuildCapability buildCapability, int userId);
   
   List<BuildCapabilityIdentifier> getBuildCapabilitiesIdentifier(int userId);

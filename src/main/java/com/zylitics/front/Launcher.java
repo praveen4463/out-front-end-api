@@ -6,7 +6,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import com.zylitics.front.api.VMService;
 import com.zylitics.front.config.APICoreProperties;
+import com.zylitics.front.services.LocalVMService;
+import com.zylitics.front.services.ProductionVMService;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
@@ -21,6 +24,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import javax.sql.DataSource;
 
@@ -117,4 +121,16 @@ public class Launcher {
     return transactionTemplate;
   }
   
+  @Bean
+  @Profile("production")
+  VMService productionVMService(APICoreProperties apiCoreProperties,
+                                WebClient.Builder webClientBuildeer) {
+    return new ProductionVMService(webClientBuildeer, apiCoreProperties);
+  }
+  
+  @Bean
+  @Profile("e2e")
+  VMService localVMService() {
+    return new LocalVMService();
+  }
 }

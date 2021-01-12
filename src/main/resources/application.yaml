@@ -32,4 +32,9 @@ api-core:
     common-uploads-bucket: zl-common-uploads
     max-test-file-size-mb: 200
     max-common-file-size-mb: 100
+  services:
+    wzgp-endpoint: http://wzgp.api.internal.zylitics.io
+    wzgp-version: beta
+    btbr-version: beta
+    btbr-port: 8080
 ---

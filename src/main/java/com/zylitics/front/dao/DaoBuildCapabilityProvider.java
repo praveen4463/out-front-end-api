@@ -60,6 +60,37 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
   }
   
   @Override
+  public void captureCapability(int buildCapabilityId, int buildId) {
+    String sql = "INSERT INTO bt_build_captured_capabilities (bt_build_id, name,\n" +
+        "shot_take_test_shot, server_os, wd_browser_name,\n" +
+        "wd_browser_version, wd_platform_name, wd_accept_insecure_certs,\n" +
+        "wd_page_load_strategy, wd_set_window_rect, wd_timeouts_script,\n" +
+        "wd_timeouts_page_load, wd_timeouts_element_access, wd_strict_file_interactability,\n" +
+        "wd_unhandled_prompt_behavior, wd_ie_element_scroll_behavior,\n" +
+        "wd_ie_enable_persistent_hovering, wd_ie_require_window_focus,\n" +
+        "wd_ie_disable_native_events, wd_ie_destructively_ensure_clean_session,\n" +
+        "wd_ie_log_level, wd_chrome_verbose_logging, wd_chrome_silent_output,\n" +
+        "wd_chrome_enable_network, wd_chrome_enable_page, wd_firefox_log_level,\n" +
+        "wd_brw_start_maximize)\n" +
+        "SELECT :bt_build_id, name,\n" +
+        "shot_take_test_shot, server_os, wd_browser_name,\n" +
+        "wd_browser_version, wd_platform_name, wd_accept_insecure_certs,\n" +
+        "wd_page_load_strategy, wd_set_window_rect, wd_timeouts_script,\n" +
+        "wd_timeouts_page_load, wd_timeouts_element_access, wd_strict_file_interactability,\n" +
+        "wd_unhandled_prompt_behavior, wd_ie_element_scroll_behavior,\n" +
+        "wd_ie_enable_persistent_hovering, wd_ie_require_window_focus,\n" +
+        "wd_ie_disable_native_events, wd_ie_destructively_ensure_clean_session,\n" +
+        "wd_ie_log_level, wd_chrome_verbose_logging, wd_chrome_silent_output,\n" +
+        "wd_chrome_enable_network, wd_chrome_enable_page, wd_firefox_log_level,\n" +
+        "wd_brw_start_maximize\n" +
+        "FROM bt_build_capability WHERE bt_build_capability_id = :bt_build_capability_id";
+    int result = jdbc.update(sql, new SqlParamsBuilder()
+        .withInteger("bt_build_id", buildId)
+        .withInteger("bt_build_capability_id", buildCapabilityId).build());
+    CommonUtil.validateSingleRowDbCommit(result);
+  }
+  
+  @Override
   public void updateCapability(BuildCapability buildCapability, int userId) {
     Preconditions.checkNotNull(buildCapability, "buildCapability can't be null");
     Preconditions.checkArgument(buildCapability.getId() > 0, "buildCapabilityId must be given");

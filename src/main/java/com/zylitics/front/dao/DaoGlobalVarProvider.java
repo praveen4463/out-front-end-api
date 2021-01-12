@@ -9,6 +9,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.stereotype.Repository;
 
+import java.sql.JDBCType;
 import java.util.List;
 
 @Repository
@@ -68,6 +69,17 @@ public class DaoGlobalVarProvider extends AbstractDaoProvider implements GlobalV
         .withOther("value", value)
         .withInteger("zwl_globals_id", globalVarId).build());
     CommonUtil.validateSingleRowDbCommit(result);
+  }
+  
+  @Override
+  public void captureGlobalVars(int projectId, int buildId) {
+    String sql = "INSERT INTO bt_build_zwl_globals (bt_build_id, key, value)\n" +
+        "SELECT :bt_build_id, key, value FROM zwl_globals\n" +
+        "WHERE bt_project_id = :bt_project_id";
+    SqlParameterSource namedParams = new SqlParamsBuilder()
+        .withProject(projectId)
+        .withInteger("bt_build_id", buildId).build();
+    jdbc.update(sql, namedParams);
   }
   
   @Override
