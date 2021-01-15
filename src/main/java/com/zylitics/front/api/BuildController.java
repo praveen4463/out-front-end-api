@@ -165,7 +165,7 @@ public class BuildController extends AbstractController {
       }
       buildProvider.updateSession(sessionId, buildIdentifier.getBuildId());
       return ResponseEntity.ok(new NewBuildResponse().setBuildIdentifier(buildIdentifier)
-          .setSessionKey(sessionId));
+          .setSessionId(sessionId));
     } catch (Throwable t) {
       buildRequestProvider.markBuildRequestCompleted(buildRequestId);
       throw t;
@@ -218,7 +218,7 @@ public class BuildController extends AbstractController {
     BuildStatus buildStatus = buildStatusOptional.get();
     long timeTaken = 0;
     RunError error = null;
-    if (buildStatus.getStartDate() != null) {
+    if (buildStatus.getStartDate() != null && buildStatus.getEndDate() != null) {
       timeTaken = ChronoUnit.MILLIS.between(buildStatus.getStartDate(), buildStatus.getEndDate());
     }
     if (buildStatus.getError() != null) {
@@ -240,8 +240,9 @@ public class BuildController extends AbstractController {
       if (zwlProgramOutput.getOutputs() != null) {
         output = String.join("\n", zwlProgramOutput.getOutputs());
       }
-      buildStatusOutput.setOutput(output);
-      buildStatusOutput.setNextOutputToken(zwlProgramOutput.getNextOutputToken());
+      buildStatusOutput
+          .setOutput(output)
+          .setNextOutputToken(zwlProgramOutput.getNextOutputToken());
     }
     return ResponseEntity.ok(buildStatusOutput);
   }

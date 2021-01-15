@@ -37,4 +37,5 @@ api-core:
     wzgp-version: beta
     btbr-version: beta
     btbr-port: 8080
+    local-vm-env-var: VM_LOCAL
 ---

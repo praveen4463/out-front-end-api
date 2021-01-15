@@ -22,7 +22,7 @@ public class DaoUserProvider extends AbstractDaoProvider implements UserProvider
   public Optional<User> getUser(int userId) {
     String sql = "SELECT first_name, last_name, email, timezone, role,\n" +
         "shot_bucket_session_storage, plan_type, minutes, total_parallel,\n" +
-        "coalesce(minutes_consumed, 0)\n" +
+        "coalesce(minutes_consumed, 0) AS minutes_consumed\n" +
         "FROM zluser AS u\n" +
         "INNER JOIN quota AS q ON (u.organization_id = q.organization_id)\n" +
         "INNER JOIN plan AS p ON (q.plan_id = p.plan_id)\n" +

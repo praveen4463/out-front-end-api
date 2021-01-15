@@ -1,15 +1,26 @@
 package com.zylitics.front.model;
 
-public class NewBuildResponse extends BuildIdentifier {
+public class NewBuildResponse {
   
-  private String sessionKey;
+  private BuildIdentifier buildIdentifier;
   
-  public String getSessionKey() {
-    return sessionKey;
+  private String sessionId;
+  
+  public BuildIdentifier getBuildIdentifier() {
+    return buildIdentifier;
   }
   
-  public NewBuildResponse setSessionKey(String sessionKey) {
-    this.sessionKey = sessionKey;
+  public NewBuildResponse setBuildIdentifier(BuildIdentifier buildIdentifier) {
+    this.buildIdentifier = buildIdentifier;
+    return this;
+  }
+  
+  public String getSessionId() {
+    return sessionId;
+  }
+  
+  public NewBuildResponse setSessionId(String sessionId) {
+    this.sessionId = sessionId;
     return this;
   }
 }

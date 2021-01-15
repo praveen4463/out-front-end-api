@@ -26,6 +26,13 @@ import java.util.Optional;
 @Service
 public class EsdbZwlProgramOutputProvider implements ZwlProgramOutputProvider {
   
+  // we want all available output fetched. This is important so that if client delays sending a
+  // request for some version and if that version is now completed, client has just 1 request to
+  // fetch all output because it will received a complete status and will move to next version. If
+  // we fetch partial output, client may end up receiving uncompleted output for a version.
+  // I feel 1000 should be enough to get all output
+  private final static int MAX_OUTPUT_SIZE = 1000;
+  
   private final RestHighLevelClient restHighLevelClient;
   
   private final APICoreProperties apiCoreProperties;
@@ -36,7 +43,6 @@ public class EsdbZwlProgramOutputProvider implements ZwlProgramOutputProvider {
     this.apiCoreProperties = apiCoreProperties;
   }
   
-  // - For now I feel output of 10 lines should be enough and not giving a custom size.
   // - token keeps the date of last record found, nothing else.
   @Override
   public Optional<ZwlProgramOutput> getOutput(int buildId,
@@ -54,7 +60,8 @@ public class EsdbZwlProgramOutputProvider implements ZwlProgramOutputProvider {
     }
     sourceBuilder
         .query(query)
-        .sort(ZwlProgramOutputIndexFields.CREATE_DATE, SortOrder.ASC);
+        .sort(ZwlProgramOutputIndexFields.CREATE_DATE, SortOrder.ASC)
+        .size(MAX_OUTPUT_SIZE);
     sourceBuilder.fetchSource(new String[] {
         ZwlProgramOutputIndexFields.OUTPUT,
         ZwlProgramOutputIndexFields.CREATE_DATE,

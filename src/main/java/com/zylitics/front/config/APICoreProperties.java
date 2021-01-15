@@ -369,8 +369,11 @@ public class APICoreProperties {
     @NotBlank
     private String btbrVersion;
     
-    @NotBlank
+    @Min(1)
     private Integer btbrPort;
+  
+    @NotBlank
+    private String localVmEnvVar;
     
     public String getWzgpEndpoint() {
       return wzgpEndpoint;
@@ -410,6 +413,15 @@ public class APICoreProperties {
       if (this.btbrPort == null) {
         this.btbrPort = btbrPort;
       }
+    }
+  
+    public String getLocalVmEnvVar() {
+      return localVmEnvVar;
+    }
+  
+    public Services setLocalVmEnvVar(String localVmEnvVar) {
+      this.localVmEnvVar = localVmEnvVar;
+      return this;
     }
   }
 }

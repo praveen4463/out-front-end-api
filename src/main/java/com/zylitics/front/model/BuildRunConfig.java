@@ -24,7 +24,6 @@ public class BuildRunConfig {
   
   private RunnerPreferences runnerPreferences;
   
-  @NotBlank
   private BuildSourceType buildSourceType;
   
   @NotEmpty

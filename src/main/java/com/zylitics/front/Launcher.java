@@ -130,7 +130,7 @@ public class Launcher {
   
   @Bean
   @Profile("e2e")
-  VMService localVMService() {
-    return new LocalVMService();
+  VMService localVMService(APICoreProperties apiCoreProperties) {
+    return new LocalVMService(apiCoreProperties);
   }
 }
