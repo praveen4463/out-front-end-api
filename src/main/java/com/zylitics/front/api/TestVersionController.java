@@ -45,7 +45,7 @@ public class TestVersionController extends AbstractController {
   }
   
   @SuppressWarnings("unused")
-  @PostMapping
+  @PostMapping("/versions")
   public ResponseEntity<TestVersion> newVersion(
       @Validated @RequestBody TestVersion testVersion,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo

@@ -30,11 +30,11 @@ public class DaoBuildVMProvider extends AbstractDaoProvider implements BuildVMPr
   
   @Override
   public Optional<BuildVM> getBuildVMByBuild(int buildId, int userId) {
-    String sql = "SELECT bt_build_vm_id, internal_ip, name, zone, delete_from_runner\n" +
-        "FROM bt_build_vm AS bv\n" +
+    String sql = "SELECT bv.bt_build_vm_id, bv.internal_ip, bv.name, bv.zone,\n" +
+        "bv.delete_from_runner FROM bt_build_vm AS bv\n" +
         "INNER JOIN bt_build AS bu ON (bv.bt_build_vm_id = bu.bt_build_vm_id)\n" +
         "INNER JOIN bt_project AS p ON (bu.bt_project_id = p.bt_project_id)\n" +
-        "WHERE bt_build_id = :bt_build_id AND p.zluser_id = :zluser_id";
+        "WHERE bu.bt_build_id = :bt_build_id AND p.zluser_id = :zluser_id";
     List<BuildVM> vms = jdbc.query(sql, new SqlParamsBuilder(userId)
         .withInteger("bt_build_id", buildId).build(), (rs, rowNum) ->
         new BuildVM()

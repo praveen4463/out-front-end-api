@@ -21,6 +21,7 @@ public class UrlChecker {
     try {
       HttpURLConnection connection = null;
       long sleepMillis = MIN_POLL_INTERVAL_MS;
+      long maxTimeout = MILLISECONDS.convert(timeout, unit);
       while (true) {
         try {
           connection = connectToUrl(new URL(url));
@@ -35,7 +36,7 @@ public class UrlChecker {
           }
         }
         long elapsed = MILLISECONDS.convert(System.nanoTime() - start, NANOSECONDS);
-        if (MILLISECONDS.convert(timeout, unit) > elapsed) {
+        if (elapsed > maxTimeout) {
           throw new TimeoutException(String.format("Couldn't connect to %s after waiting for %d",
               url, elapsed));
         }

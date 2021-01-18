@@ -36,7 +36,7 @@ public class RunnerService {
   public String newSession(String runnerIP, int buildId) {
     APICoreProperties.Services servicesProps = apiCoreProperties.getServices();
     String baseUrl = buildBaseUrl(runnerIP, servicesProps);
-    String statusEndpoint = "/builds/status"; // TODO: fix btbr status endpoint to be without builds prefix
+    String statusEndpoint = "/status";
     // if any timeout occurs while polling for status, let exception throw
     new UrlChecker().waitUntilAvailable(VM_AVAILABILITY_TIMEOUT_MIN, TimeUnit.MINUTES,
         baseUrl + statusEndpoint);

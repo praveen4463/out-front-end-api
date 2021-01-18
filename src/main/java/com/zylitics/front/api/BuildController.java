@@ -35,7 +35,7 @@ public class BuildController extends AbstractController {
   
   private final BuildVMProvider buildVMProvider;
   
-  private final ZwlProgramOutputProvider zwlProgramOutputProvider;
+  private final BuildOutputProvider buildOutputProvider;
   
   private final BuildStatusProvider buildStatusProvider;
   
@@ -51,7 +51,7 @@ public class BuildController extends AbstractController {
                          RunnerService runnerService,
                          BuildCapabilityProvider buildCapabilityProvider,
                          BuildVMProvider buildVMProvider,
-                         ZwlProgramOutputProvider zwlProgramOutputProvider,
+                         BuildOutputProvider buildOutputProvider,
                          BuildStatusProvider buildStatusProvider) {
     this.buildProvider = buildProvider;
     this.userProvider = userProvider;
@@ -59,7 +59,7 @@ public class BuildController extends AbstractController {
     this.testVersionProvider = testVersionProvider;
     this.buildCapabilityProvider = buildCapabilityProvider;
     this.buildVMProvider = buildVMProvider;
-    this.zwlProgramOutputProvider = zwlProgramOutputProvider;
+    this.buildOutputProvider = buildOutputProvider;
     this.buildStatusProvider = buildStatusProvider;
     this.vmService = vmService;
     this.runnerService = runnerService;
@@ -87,6 +87,7 @@ public class BuildController extends AbstractController {
   This way, a build request record will denote a parallel quota occupation.
    */
   @PostMapping("/projects/{projectId}/builds")
+  @SuppressWarnings("unused")
   public ResponseEntity<?> newBuild(
       @Validated @RequestBody BuildRunConfig buildRunConfig,
       @PathVariable @Min(1) int projectId,
@@ -212,8 +213,8 @@ public class BuildController extends AbstractController {
       // new version.
     }
     // When build status available, fetch output
-    Optional<ZwlProgramOutput> zwlProgramOutputOptional =
-        zwlProgramOutputProvider.getOutput(buildId, versionId, nextOutputToken);
+    Optional<BuildOutput> buildOutputOptional =
+        buildOutputProvider.getOutput(buildId, versionId, nextOutputToken);
     // transform buildStatus into BuildStatusOutput
     BuildStatus buildStatus = buildStatusOptional.get();
     long timeTaken = 0;
@@ -234,15 +235,11 @@ public class BuildController extends AbstractController {
         .setCurrentLine(buildStatus.getZwlExecutingLine())
         .setError(error)
         .setTimeTaken(timeTaken);
-    if (zwlProgramOutputOptional.isPresent()) {
-      ZwlProgramOutput zwlProgramOutput = zwlProgramOutputOptional.get();
-      String output = null;
-      if (zwlProgramOutput.getOutputs() != null) {
-        output = String.join("\n", zwlProgramOutput.getOutputs());
-      }
+    if (buildOutputOptional.isPresent()) {
+      BuildOutput buildOutput = buildOutputOptional.get();
       buildStatusOutput
-          .setOutput(output)
-          .setNextOutputToken(zwlProgramOutput.getNextOutputToken());
+          .setOutput(buildOutput.getOutputsWithLineBreak())
+          .setNextOutputToken(buildOutput.getNextOutputToken());
     }
     return ResponseEntity.ok(buildStatusOutput);
   }
