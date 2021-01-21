@@ -26,6 +26,10 @@ public class DaoBuildOutputProvider extends AbstractDaoProvider implements Build
         "WHERE bt_build_id = :bt_build_id AND bt_test_version_id = :bt_test_version_id\n");
     boolean isTokenEmpty = Strings.isNullOrEmpty(nextOutputToken);
     if (!isTokenEmpty) {
+      // validate token
+      if (!nextOutputToken.matches("bt_build_output_id > \\d+")) {
+        throw new IllegalArgumentException("Corrupted token was supplied");
+      }
       sql.append("AND ").append(nextOutputToken);
     }
     sql.append("GROUP BY bt_build_id, bt_test_version_id");

@@ -1,6 +1,7 @@
 package com.zylitics.front.dao;
 
 import com.google.common.base.Preconditions;
+import com.zylitics.front.model.CapturedVariable;
 import com.zylitics.front.model.GlobalVar;
 import com.zylitics.front.provider.GlobalVarProvider;
 import com.zylitics.front.util.CommonUtil;
@@ -9,7 +10,6 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.stereotype.Repository;
 
-import java.sql.JDBCType;
 import java.util.List;
 
 @Repository
@@ -91,5 +91,17 @@ public class DaoGlobalVarProvider extends AbstractDaoProvider implements GlobalV
     int result = jdbc.update(sql, new SqlParamsBuilder(userId)
         .withInteger("zwl_globals_id", globalVarId).build());
     CommonUtil.validateSingleRowDbCommit(result);
+  }
+  
+  @Override
+  public List<CapturedVariable> getCapturedGlobalVars(int buildId, int userId) {
+    String sql = "SELECT key, value FROM bt_build_zwl_globals AS gv\n" +
+        "INNER JOIN bt_build AS b ON (gv.bt_build_id = b.bt_build_id)\n" +
+        "INNER JOIN bt_project AS p ON (b.bt_project_id = p.bt_project_id)\n" +
+        "WHERE gv.bt_build_id = :bt_build_id AND p.zluser_id = :zluser_id";
+    return jdbc.query(sql, new SqlParamsBuilder(userId).withInteger("bt_build_id", buildId).build(),
+        (rs, rowNum) -> new CapturedVariable()
+            .setKey(rs.getString("key"))
+            .setValue(rs.getString("value")));
   }
 }

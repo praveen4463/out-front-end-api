@@ -30,6 +30,10 @@ api-core:
     user-data-bucket: zl-user-data
     user-uploads-storage-dir-tmpl : USER_ID/uploads
     common-uploads-bucket: zl-common-uploads
+    driver-logs-dir: driver-logs
+    driver-logs-file: driver.log
+    browser-perf-logs-dir: performance-logs
+    browser-perf-logs-file: performance.log
     max-test-file-size-mb: 200
     max-common-file-size-mb: 100
   services:

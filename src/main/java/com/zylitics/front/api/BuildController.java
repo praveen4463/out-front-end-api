@@ -1,5 +1,10 @@
 package com.zylitics.front.api;
 
+import com.google.api.gax.paging.Page;
+import com.google.cloud.storage.Blob;
+import com.google.cloud.storage.BlobId;
+import com.google.cloud.storage.Storage;
+import com.zylitics.front.config.APICoreProperties;
 import com.zylitics.front.exception.UnauthorizedException;
 import com.zylitics.front.model.*;
 import com.zylitics.front.provider.*;
@@ -13,7 +18,10 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.constraints.Min;
+import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,6 +30,10 @@ import java.util.Optional;
 public class BuildController extends AbstractController {
   
   private static final Logger LOG = LoggerFactory.getLogger(BuildController.class);
+  
+  private final APICoreProperties apiCoreProperties;
+  
+  private final Storage storage;
   
   private final BuildProvider buildProvider;
   
@@ -39,6 +51,12 @@ public class BuildController extends AbstractController {
   
   private final BuildStatusProvider buildStatusProvider;
   
+  private final ShotProvider shotProvider;
+  
+  private final BuildVarProvider buildVarProvider;
+  
+  private final GlobalVarProvider globalVarProvider;
+  
   private final VMService vmService;
   
   private final RunnerService runnerService;
@@ -52,7 +70,12 @@ public class BuildController extends AbstractController {
                          BuildCapabilityProvider buildCapabilityProvider,
                          BuildVMProvider buildVMProvider,
                          BuildOutputProvider buildOutputProvider,
-                         BuildStatusProvider buildStatusProvider) {
+                         BuildStatusProvider buildStatusProvider,
+                         ShotProvider shotProvider,
+                         BuildVarProvider buildVarProvider,
+                         GlobalVarProvider globalVarProvider,
+                         APICoreProperties apiCoreProperties,
+                         Storage storage) {
     this.buildProvider = buildProvider;
     this.userProvider = userProvider;
     this.buildRequestProvider = buildRequestProvider;
@@ -63,6 +86,11 @@ public class BuildController extends AbstractController {
     this.buildStatusProvider = buildStatusProvider;
     this.vmService = vmService;
     this.runnerService = runnerService;
+    this.shotProvider = shotProvider;
+    this.buildVarProvider = buildVarProvider;
+    this.globalVarProvider = globalVarProvider;
+    this.apiCoreProperties = apiCoreProperties;
+    this.storage = storage;
   }
   
   /*
@@ -244,7 +272,239 @@ public class BuildController extends AbstractController {
     return ResponseEntity.ok(buildStatusOutput);
   }
   
+  @GetMapping("/builds/{buildId}/getLatestShot")
+  public ResponseEntity<LatestShotResponse> getLatestShot(
+      @PathVariable @Min(1) int buildId,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
+  ) {
+    buildProvider.verifyUsersBuild(buildId, getUserId(userInfo));
+    Optional<String> latestShot = shotProvider.getLatestShot(buildId);
+    return latestShot.map(s -> ResponseEntity.ok(new LatestShotResponse().setShotName(s)))
+        .orElseGet(() -> ResponseEntity.ok().build());
+  }
+  
+  @GetMapping("/builds/{buildId}/getShotBasicDetails")
+  public ResponseEntity<ShotBasicDetails> getShotBasicDetails(
+      @PathVariable @Min(1) int buildId,
+      @RequestParam(required = false) Integer versionId,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
+  ) {
+    buildProvider.verifyUsersBuild(buildId, getUserId(userInfo));
+    Optional<ShotBasicDetails> shotBasicDetails = shotProvider
+        .getShotBasicDetails(buildId, versionId);
+    return shotBasicDetails.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.ok().build());
+  }
+  
+  @GetMapping("/builds/{buildId}/getCapturedBuildCapability")
+  public ResponseEntity<BuildCapability> getCapturedBuildCapability(
+      @PathVariable @Min(1) int buildId,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
+  ) {
+    int userId = getUserId(userInfo);
+    Optional<BuildCapability> buildCapabilityOptional =
+        buildCapabilityProvider.getCapturedCapability(buildId, userId);
+    if (!buildCapabilityOptional.isPresent()) {
+      throw new UnauthorizedException(
+          "User " + userId + " doesn't have access on build " + buildId);
+    }
+    return ResponseEntity.ok(buildCapabilityOptional.get());
+  }
+  
+  // send back a list of variables rather than Map so that it's easier on client to sort the array
+  @GetMapping("/builds/{buildId}/getCapturedBuildVars")
+  public ResponseEntity<List<CapturedVariable>> getCapturedBuildVars(
+      @PathVariable @Min(1) int buildId,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
+  ) {
+    return ResponseEntity.ok(buildVarProvider.getCapturedBuildVars(buildId, getUserId(userInfo)));
+  }
+  
+  // send back a list of variables rather than Map so that it's easier on client to sort the array
+  @GetMapping("/builds/{buildId}/getCapturedGlobalVars")
+  public ResponseEntity<List<CapturedVariable>> getCapturedGlobalVars(
+      @PathVariable @Min(1) int buildId,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
+  ) {
+    return ResponseEntity.ok(globalVarProvider.getCapturedGlobalVars(buildId, getUserId(userInfo)));
+  }
+  
+  @GetMapping("/builds/{buildId}/getRunnerPreferences")
+  public ResponseEntity<RunnerPreferences> getRunnerPreferences(
+      @PathVariable @Min(1) int buildId,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
+  ) {
+    int userId = getUserId(userInfo);
+    Optional<RunnerPreferences> runnerPreferencesOptional =
+        buildProvider.getRunnerPrefs(buildId, getUserId(userInfo));
+    if (!runnerPreferencesOptional.isPresent()) {
+      throw new UnauthorizedException(
+          "User " + userId + " doesn't have access on build " + buildId);
+    }
+    return ResponseEntity.ok(runnerPreferencesOptional.get());
+  }
+  
+  @GetMapping("/builds/{buildId}/getBuildBasicDetails")
+  public ResponseEntity<BuildBasicDetails> getBuildBasicDetails(
+      @PathVariable @Min(1) int buildId,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
+  ) {
+    int userId = getUserId(userInfo);
+    Optional<BuildBasicDetails> buildBasicDetailsOptional =
+        buildProvider.getBuildBasicDetails(buildId, userId);
+    if (!buildBasicDetailsOptional.isPresent()) {
+      throw new UnauthorizedException(
+          "User " + userId + " doesn't have access on build " + buildId);
+    }
+    BuildBasicDetails buildBasicDetails = buildBasicDetailsOptional.get();
+    // if runner has not completed processing the build, don't check other things that may be in
+    // progress.
+    if (buildBasicDetails.getAllDoneDate() == null) {
+      return ResponseEntity.ok(buildBasicDetails);
+    }
+    // add remaining things into details from cloud
+    String buildDir = Common.getBuildDirName(buildId);
+    APICoreProperties.Storage storageProps = apiCoreProperties.getStorage();
+    Blob driverLogsBlob = getDriverLogsBlob(storageProps, buildDir);
+    Blob perfLogsBlob = getPerfLogsBlob(storageProps, buildDir);
+    Iterator<Blob> elementShotIterator = getElementShotIterator(storageProps, buildDir);
+    if (elementShotIterator.hasNext()) {
+      Blob blob = elementShotIterator.next();
+      if (blob.getName().endsWith(".png")) {
+        buildBasicDetails.setElemShotsAvailable(true);
+      }
+    }
+    buildBasicDetails.setDriverLogsAvailable(driverLogsBlob != null);
+    buildBasicDetails.setPerfLogsAvailable(perfLogsBlob != null);
+    // since a build is immutable and it's done, we want browser to cache the response.
+    return Common.addCacheControlPublic(ResponseEntity.ok()).body(buildBasicDetails);
+  }
+  
+  @GetMapping("/builds/{buildId}/getDriverLogs")
+  public ResponseEntity<LogsResponse> getDriverLogs(
+      @PathVariable @Min(1) int buildId,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
+  ) {
+    String buildDir = Common.getBuildDirName(buildId);
+    APICoreProperties.Storage storageProps = apiCoreProperties.getStorage();
+    return sendLogsResponse(buildId, getUserId(userInfo),
+        getDriverLogsBlob(storageProps, buildDir));
+  }
+  
+  @GetMapping("/builds/{buildId}/getPerformanceLogs")
+  public ResponseEntity<LogsResponse> getPerformanceLogs(
+      @PathVariable @Min(1) int buildId,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
+  ) {
+    String buildDir = Common.getBuildDirName(buildId);
+    APICoreProperties.Storage storageProps = apiCoreProperties.getStorage();
+    return sendLogsResponse(buildId, getUserId(userInfo),
+        getPerfLogsBlob(storageProps, buildDir));
+  }
+  
+  // TODO: I am sending log file contents as String, being log files can be large, there may be
+  //  issues both at api and client. Keep a watch and may be later we will have to lazy load the
+  //  file or give just option to download.
+  private ResponseEntity<LogsResponse> sendLogsResponse(int buildId, int userId, Blob blob) {
+    buildProvider.verifyUsersBuild(buildId, userId);
+    if (blob == null) {
+      return ResponseEntity.ok().build();
+    }
+    byte[] file = new FileDownload().download(blob);
+    // send a cached response as these files are immutable
+    return Common.addCacheControlPublic(ResponseEntity.ok())
+        .body(new LogsResponse().setLog(new String(file, StandardCharsets.UTF_8)));
+  }
+  
+  @GetMapping("/builds/{buildId}/getElementShotNames")
+  public ResponseEntity<ElementShotsResponse> getElementShotNames(
+      @PathVariable @Min(1) int buildId,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
+  ) {
+    buildProvider.verifyUsersBuild(buildId, getUserId(userInfo));
+    String buildDir = Common.getBuildDirName(buildId);
+    APICoreProperties.Storage storageProps = apiCoreProperties.getStorage();
+    Iterator<Blob> elementShotIterator = getElementShotIterator(storageProps, buildDir);
+    List<String> shots = new ArrayList<>();
+    while (elementShotIterator.hasNext()) {
+      Blob blob = elementShotIterator.next();
+      if (blob.getName().endsWith(".png")) {
+        shots.add(blob.getName().replace(buildDir + "/", ""));
+      }
+    }
+    if (shots.size() == 0) {
+      return ResponseEntity.ok().build();
+    }
+    // send a cached response as shot list is immutable
+    return Common.addCacheControlPublic(ResponseEntity.ok())
+        .body(new ElementShotsResponse().setShotNames(shots));
+  }
+  
+  private Blob getDriverLogsBlob(APICoreProperties.Storage storageProps, String buildDir) {
+    return storage.get(BlobId.of(storageProps.getServerLogsBucket(),
+        Common.getBlobName(buildDir,
+            storageProps.getDriverLogsDir(),
+            storageProps.getDriverLogsFile())));
+  }
+  
+  private Blob getPerfLogsBlob(APICoreProperties.Storage storageProps, String buildDir) {
+    return storage.get(BlobId.of(storageProps.getServerLogsBucket(),
+        Common.getBlobName(buildDir,
+            storageProps.getBrowserPerfLogsDir(),
+            storageProps.getBrowserPerfLogsFile())));
+  }
+  
+  private Iterator<Blob> getElementShotIterator(APICoreProperties.Storage storageProps,
+                                                String buildDir) {
+    Page<Blob> elementShotsBlobs = storage.list(storageProps.getElemShotsBucket(),
+        Storage.BlobListOption.prefix(buildDir));
+    return elementShotsBlobs.getValues().iterator();
+  }
+  
   private void markBuildRequestCompleted(long buildRequestId) {
     buildRequestProvider.markBuildRequestCompleted(buildRequestId);
+  }
+  
+  private static class LatestShotResponse {
+    
+    private String shotName;
+  
+    @SuppressWarnings("unused")
+    public String getShotName() {
+      return shotName;
+    }
+  
+    public LatestShotResponse setShotName(String shotName) {
+      this.shotName = shotName;
+      return this;
+    }
+  }
+  
+  private static class LogsResponse {
+    
+    private String log;
+  
+    @SuppressWarnings("unused")
+    public String getLog() {
+      return log;
+    }
+  
+    public LogsResponse setLog(String log) {
+      this.log = log;
+      return this;
+    }
+  }
+  
+  private static class ElementShotsResponse {
+    
+    private List<String> shotNames;
+  
+    public List<String> getShotNames() {
+      return shotNames;
+    }
+  
+    public ElementShotsResponse setShotNames(List<String> shotNames) {
+      this.shotNames = shotNames;
+      return this;
+    }
   }
 }

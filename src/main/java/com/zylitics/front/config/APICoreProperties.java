@@ -280,6 +280,18 @@ public class APICoreProperties {
   
     @NotBlank
     private String commonUploadsBucket;
+  
+    @NotBlank
+    private String driverLogsDir;
+  
+    @NotBlank
+    private String driverLogsFile;
+  
+    @NotBlank
+    private String browserPerfLogsDir;
+  
+    @NotBlank
+    private String browserPerfLogsFile;
     
     @Min(10)
     private Integer maxTestFileSizeMb;
@@ -334,6 +346,46 @@ public class APICoreProperties {
     public void setCommonUploadsBucket(String commonUploadsBucket) {
       if (this.commonUploadsBucket == null) {
         this.commonUploadsBucket = commonUploadsBucket;
+      }
+    }
+  
+    public String getDriverLogsDir() {
+      return driverLogsDir;
+    }
+  
+    public void setDriverLogsDir(String driverLogsDir) {
+      if (this.driverLogsDir == null) {
+        this.driverLogsDir = driverLogsDir;
+      }
+    }
+  
+    public String getDriverLogsFile() {
+      return driverLogsFile;
+    }
+  
+    public void setDriverLogsFile(String driverLogsFile) {
+      if (this.driverLogsFile == null) {
+        this.driverLogsFile = driverLogsFile;
+      }
+    }
+  
+    public String getBrowserPerfLogsDir() {
+      return browserPerfLogsDir;
+    }
+  
+    public void setBrowserPerfLogsDir(String browserPerfLogsDir) {
+      if (this.browserPerfLogsDir == null) {
+        this.browserPerfLogsDir = browserPerfLogsDir;
+      }
+    }
+  
+    public String getBrowserPerfLogsFile() {
+      return browserPerfLogsFile;
+    }
+  
+    public void setBrowserPerfLogsFile(String browserPerfLogsFile) {
+      if (this.browserPerfLogsFile == null) {
+        this.browserPerfLogsFile = browserPerfLogsFile;
       }
     }
   

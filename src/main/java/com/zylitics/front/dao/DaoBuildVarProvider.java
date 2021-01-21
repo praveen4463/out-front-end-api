@@ -2,6 +2,7 @@ package com.zylitics.front.dao;
 
 import com.google.common.base.Preconditions;
 import com.zylitics.front.model.BuildVar;
+import com.zylitics.front.model.CapturedVariable;
 import com.zylitics.front.provider.BuildVarProvider;
 import com.zylitics.front.util.CommonUtil;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -248,5 +249,17 @@ public class DaoBuildVarProvider extends AbstractDaoProvider implements BuildVar
     int result = jdbc.update(sql, new SqlParamsBuilder(userId)
         .withInteger("zwl_build_variables_id", buildVarId).build());
     CommonUtil.validateSingleRowDbCommit(result);
+  }
+  
+  @Override
+  public List<CapturedVariable> getCapturedBuildVars(int buildId, int userId) {
+    String sql = "SELECT key, value FROM bt_build_zwl_build_variables AS bv\n" +
+        "INNER JOIN bt_build AS b ON (bv.bt_build_id = b.bt_build_id)\n" +
+        "INNER JOIN bt_project AS p ON (b.bt_project_id = p.bt_project_id)\n" +
+        "WHERE bv.bt_build_id = :bt_build_id AND p.zluser_id = :zluser_id";
+    return jdbc.query(sql, new SqlParamsBuilder(userId).withInteger("bt_build_id", buildId).build(),
+        (rs, rowNum) -> new CapturedVariable()
+            .setKey(rs.getString("key"))
+            .setValue(rs.getString("value")));
   }
 }

@@ -19,4 +19,6 @@ public interface BuildCapabilityProvider {
   Optional<BuildCapability> getBuildCapability(int buildCapabilityId, int userId);
   
   void deleteCapability(int buildCapabilityId, int userId);
+  
+  Optional<BuildCapability> getCapturedCapability(int buildId, int userId);
 }

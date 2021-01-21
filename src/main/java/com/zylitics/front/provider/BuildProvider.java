@@ -1,9 +1,8 @@
 package com.zylitics.front.provider;
 
-import com.zylitics.front.model.BuildIdentifier;
-import com.zylitics.front.model.BuildRunConfig;
-import com.zylitics.front.model.BuildVM;
-import com.zylitics.front.model.User;
+import com.zylitics.front.model.*;
+
+import java.util.Optional;
 
 public interface BuildProvider {
   
@@ -12,4 +11,10 @@ public interface BuildProvider {
   void createAndUpdateVM(BuildVM buildVM, int buildId);
   
   void updateSession(String sessionId, int buildId);
+  
+  void verifyUsersBuild(int buildId, int userId);
+  
+  Optional<RunnerPreferences> getRunnerPrefs(int buildId, int userId);
+  
+  Optional<BuildBasicDetails> getBuildBasicDetails(int buildId, int userId);
 }

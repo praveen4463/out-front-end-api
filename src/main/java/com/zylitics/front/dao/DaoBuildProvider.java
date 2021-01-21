@@ -3,11 +3,15 @@ package com.zylitics.front.dao;
 import com.zylitics.front.model.*;
 import com.zylitics.front.provider.*;
 import com.zylitics.front.util.CommonUtil;
+import com.zylitics.front.util.DateTimeUtil;
 import com.zylitics.front.util.Randoms;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.support.TransactionTemplate;
+
+import java.util.List;
+import java.util.Optional;
 
 @Repository
 public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvider {
@@ -123,5 +127,57 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
     CommonUtil.validateSingleRowDbCommit(jdbc.update(sql, new SqlParamsBuilder()
         .withVarchar("session_key", sessionId)
         .withInteger("bt_build_id", buildId).build()));
+  }
+  
+  @Override
+  public void verifyUsersBuild(int buildId, int userId) {
+    common.verifyUsersBuild(buildId, userId);
+  }
+  
+  @Override
+  public Optional<RunnerPreferences> getRunnerPrefs(int buildId, int userId) {
+    String sql = "SELECT abort_on_failure, aet_keep_single_window,\n" +
+        "aet_update_url_blank, aet_reset_timeouts, aet_delete_all_cookies\n" +
+        "FROM bt_build AS b\n" +
+        "INNER JOIN bt_project AS p ON (b.bt_project_id = p.bt_project_id)\n" +
+        "WHERE b.bt_build_id = :bt_build_id AND p.zluser_id = :zluser_id";
+    List<RunnerPreferences> runnerPreferences = jdbc.query(sql, new SqlParamsBuilder(userId)
+        .withInteger("bt_build_id", buildId).build(), (rs, rowNum) ->
+        new RunnerPreferences()
+            .setAbortOnFailure(rs.getBoolean("abort_on_failure"))
+        .setAetKeepSingleWindow(rs.getBoolean("aet_keep_single_window"))
+        .setAetUpdateUrlBlank(rs.getBoolean("aet_update_url_blank"))
+        .setAetResetTimeouts(rs.getBoolean("aet_reset_timeouts"))
+        .setAetDeleteAllCookies(rs.getBoolean("aet_delete_all_cookies")));
+    if (runnerPreferences.size() == 0) {
+      return Optional.empty();
+    }
+    return Optional.of(runnerPreferences.get(0));
+  }
+  
+  @Override
+  public Optional<BuildBasicDetails> getBuildBasicDetails(int buildId, int userId) {
+    String sql = "SELECT bc.name, bc.server_os, bc.wd_browser_name, bc.wd_browser_version,\n" +
+        "b.server_screen_size, b.server_timezone_with_dst, b.shot_bucket_session_storage,\n" +
+        "b.all_done_date FROM bt_build AS b\n" +
+        "INNER JOIN bt_build_captured_capabilities AS bc ON (b.bt_build_id = bc.bt_build_id)\n" +
+        "INNER JOIN bt_project AS p ON (b.bt_project_id = p.bt_project_id)\n" +
+        "WHERE b.bt_build_id = :bt_build_id AND p.zluser_id = :zluser_id";
+    List<BuildBasicDetails> buildBasicDetailsList = jdbc.query(sql,
+        new SqlParamsBuilder(userId)
+            .withInteger("bt_build_id", buildId).build(), (rs, rowNum) ->
+            new BuildBasicDetails()
+                .setBuildCapsName(rs.getString("name"))
+        .setOs(rs.getString("server_os"))
+        .setBrowserName(rs.getString("wd_browser_name"))
+        .setBrowserVersion(rs.getString("wd_browser_version"))
+        .setResolution(rs.getString("server_screen_size"))
+        .setTimezone(rs.getString("server_timezone_with_dst"))
+        .setShotBucket(rs.getString("shot_bucket_session_storage"))
+        .setAllDoneDate(DateTimeUtil.sqlTimestampToLocal(rs.getTimestamp("all_done_date"))));
+    if (buildBasicDetailsList.size() == 0) {
+      return Optional.empty();
+    }
+    return Optional.of(buildBasicDetailsList.get(0));
   }
 }

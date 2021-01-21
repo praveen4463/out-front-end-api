@@ -270,4 +270,52 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
         .withBoolean("wd_brw_start_maximize", buildCapability.isWdBrwStartMaximize());
     return builder.build();
   }
+  
+  @Override
+  public Optional<BuildCapability> getCapturedCapability(int buildId, int userId) {
+    String sql = "SELECT bc.name, server_os, wd_browser_name,\n" +
+        "wd_browser_version, wd_platform_name, wd_accept_insecure_certs, wd_timeouts_script,\n" +
+        "wd_timeouts_page_load, wd_timeouts_element_access, wd_strict_file_interactability,\n" +
+        "wd_unhandled_prompt_behavior, wd_ie_element_scroll_behavior,\n" +
+        "wd_ie_enable_persistent_hovering, wd_ie_require_window_focus,\n" +
+        "wd_ie_disable_native_events, wd_ie_destructively_ensure_clean_session,\n" +
+        "wd_ie_log_level, wd_chrome_verbose_logging, wd_chrome_silent_output,\n" +
+        "wd_chrome_enable_network, wd_chrome_enable_page, wd_firefox_log_level,\n" +
+        "wd_brw_start_maximize FROM bt_build_captured_capabilities AS bc\n" +
+        "INNER JOIN bt_build AS b ON (bc.bt_build_id = b.bt_build_id)\n" +
+        "INNER JOIN bt_project AS p ON (b.bt_project_id = p.bt_project_id)\n" +
+        "WHERE bc.bt_build_id = :bt_build_id AND p.zluser_id = :zluser_id";
+    List<BuildCapability> buildCapabilities = jdbc.query(sql,
+        new SqlParamsBuilder(userId)
+            .withInteger("bt_build_id", buildId).build(), (rs, rowNum) ->
+            new BuildCapability()
+                .setName(rs.getString("name"))
+                .setServerOs(rs.getString("server_os"))
+                .setWdBrowserName(rs.getString("wd_browser_name"))
+                .setWdBrowserVersion(rs.getString("wd_browser_version"))
+                .setWdPlatformName(rs.getString("wd_platform_name"))
+                .setWdAcceptInsecureCerts(rs.getBoolean("wd_accept_insecure_certs"))
+                .setWdTimeoutsScript(rs.getInt("wd_timeouts_script"))
+                .setWdTimeoutsPageLoad(rs.getInt("wd_timeouts_page_load"))
+                .setWdTimeoutsElementAccess(rs.getInt("wd_timeouts_element_access"))
+                .setWdStrictFileInteractability(rs.getBoolean("wd_strict_file_interactability"))
+                .setWdUnhandledPromptBehavior(rs.getString("wd_unhandled_prompt_behavior"))
+                .setWdIeElementScrollBehavior(rs.getString("wd_ie_element_scroll_behavior"))
+                .setWdIeEnablePersistentHovering(rs.getBoolean("wd_ie_enable_persistent_hovering"))
+                .setWdIeRequireWindowFocus(rs.getBoolean("wd_ie_require_window_focus"))
+                .setWdIeDisableNativeEvents(rs.getBoolean("wd_ie_disable_native_events"))
+                .setWdIeDestructivelyEnsureCleanSession(
+                    rs.getBoolean("wd_ie_destructively_ensure_clean_session"))
+                .setWdIeLogLevel(rs.getString("wd_ie_log_level"))
+                .setWdChromeVerboseLogging(rs.getBoolean("wd_chrome_verbose_logging"))
+                .setWdChromeSilentOutput(rs.getBoolean("wd_chrome_silent_output"))
+                .setWdChromeEnableNetwork(rs.getBoolean("wd_chrome_enable_network"))
+                .setWdChromeEnablePage(rs.getBoolean("wd_chrome_enable_page"))
+                .setWdFirefoxLogLevel(rs.getString("wd_firefox_log_level"))
+                .setWdBrwStartMaximize(rs.getBoolean("wd_brw_start_maximize")));
+    if (buildCapabilities.size() == 0) {
+      return Optional.empty();
+    }
+    return Optional.of(buildCapabilities.get(0));
+  }
 }

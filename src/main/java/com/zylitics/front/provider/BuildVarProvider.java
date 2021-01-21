@@ -1,6 +1,7 @@
 package com.zylitics.front.provider;
 
 import com.zylitics.front.model.BuildVar;
+import com.zylitics.front.model.CapturedVariable;
 
 import java.util.List;
 import java.util.Map;
@@ -21,4 +22,6 @@ public interface BuildVarProvider {
   void updateBuildVar(String columnId, String value, int buildVarId, int projectId, int userId);
   
   void deleteBuildVar(int buildVarId, boolean isPrimary, int projectId, int userId);
+  
+  List<CapturedVariable> getCapturedBuildVars(int buildId, int userId);
 }

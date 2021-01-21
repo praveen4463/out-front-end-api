@@ -1,5 +1,6 @@
 package com.zylitics.front.provider;
 
+import com.zylitics.front.model.CapturedVariable;
 import com.zylitics.front.model.GlobalVar;
 
 import java.util.List;
@@ -16,4 +17,6 @@ public interface GlobalVarProvider {
   void captureGlobalVars(int projectId, int buildId);
   
   void deleteGlobalVar(int globalVarId, int userId);
+  
+  List<CapturedVariable> getCapturedGlobalVars(int buildId, int userId);
 }
