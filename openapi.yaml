@@ -1,21 +1,854 @@
 swagger: "2.0"
 info:
-  description: "Zylitics front end api"
-  title: "Zylitics front end api"
+  description: Zylitics front end api
+  title: Zylitics front end api
   # This version no. is just to showing in the console and has no affect on functionality, although it should be
   # updated whenever production version is updated.
-  version: "0.1.0"
-host: "front.api.zylitics.io"
+  version: 0.1.0
+host: front.api.zylitics.io
 x-google-endpoints:
-  - name: "front.api.zylitics.io"
+  - name: front.api.zylitics.io
     allowCors: True
-basePath: "/beta"
+basePath: /beta
 schemes:
-  - "http" # TLS is terminated before hitting ESP, so only http.
+  - http # TLS is terminated before hitting ESP, so only http.
 consumes:
-  - "application/json"
+  - application/json
 produces:
-  - "application/json"
+  - application/json
+paths:
+  /projects:
+    post:
+      description: Creates a new project
+      operationId: newProject
+      parameters:
+        - in: body
+          name: project
+          required: true
+          schema:
+            $ref: '#/definitions/Project'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/Project'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+    get:
+      description: Gets all projects for given user
+      operationId: getProjects
+      responses:
+        200:
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Project'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /testFiles:
+    put:
+      description: Upload test file
+      operationId: uploadTestFile
+      consumes:
+        - multipart/form-data
+      parameters:
+        - in: formData
+          name: file
+          type: file
+          required: true
+        - in: formData
+          name: fileName
+          type: string
+          required: true
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+    get:
+      description: Gets all testFiles for given user
+      operationId: getTestFiles
+      responses:
+        200:
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/TestFile'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /testFiles/{fileName}:
+    get:
+      description: Download testFile by fileName
+      operationId: getTestFile
+      produces:
+        - image/png
+      parameters:
+        - $ref: '#/parameters/fileName'
+      responses:
+        200:
+          description: OK
+          schema:
+            type: array
+            items:
+              type: string
+              format: byte
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+    delete:
+      description: Delete testFile by fileName
+      operationId: deleteTestFile
+      parameters:
+        - $ref: '#/parameters/fileName'
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /issue:
+    put:
+      description: Upload issue file
+      operationId: uploadIssueFile
+      consumes:
+        - multipart/form-data
+      parameters:
+        - in: formData
+          name: file
+          type: file
+          required: true
+        - in: formData
+          name: fileName
+          type: string
+          required: true
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+    post:
+      description: Send issue
+      operationId: sendIssue
+      parameters:
+        - in: body
+          name: sendIssueRequest
+          required: true
+          schema:
+            $ref: '#/definitions/SendIssueRequest'
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /buildCapabilities:
+    post:
+      description: New capability or update
+      operationId: newCapabilityOrUpdate
+      parameters:
+        - in: body
+          name: buildCapability
+          required: true
+          schema:
+            $ref: '#/definitions/BuildCapability'
+      responses:
+        200:
+          description: New or existing buildCapabilityId
+          schema:
+            type: integer
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+    get:
+      description: Gets all buildCapabilityIdentifiers for given user
+      operationId: getBuildCapabilityIdentifiers
+      responses:
+        200:
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/BuildCapabilityIdentifier'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /buildCapabilities/{buildCapabilityId}:
+    get:
+      description: Gets buildCapability
+      operationId: getBuildCapability
+      parameters:
+        - $ref: '#/parameters/buildCapabilityId'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/BuildCapability'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+    delete:
+      description: Delete buildCapability
+      operationId: deleteBuildCapability
+      parameters:
+        - $ref: '#/parameters/buildCapabilityId'
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /projects/{projectId}/files:
+    post:
+      description: New file
+      operationId: newFile
+      parameters:
+        - in: body
+          name: file
+          required: true
+          schema:
+            $ref: '#/definitions/File'
+        - $ref: '#/parameters/projectId'
+      responses:
+        200:
+          description: New file
+          schema:
+            $ref: '#/definitions/File'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+    get:
+      description: Gets all fileIdentifiers for user
+      operationId: getFileIdentifiers
+      parameters:
+        - $ref: '#/parameters/projectId'
+      responses:
+        200:
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/FileIdentifier'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+    patch:
+      description: Rename file
+      operationId: renameFile
+      parameters:
+        - in: body
+          name: file
+          required: true
+          schema:
+            $ref: '#/definitions/File'
+        - $ref: '#/parameters/projectId'
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /projects/{projectId}/files/getWithTests:
+    get:
+      description: Gets all files with tests for user
+      operationId: getFilesWithTests
+      parameters:
+        - in: query
+          name: fileIdsFilter
+          description: comma separated fileIds to filter
+          required: false
+          type: array
+          collectionFormat: csv
+          items:
+            type: integer
+        - $ref: '#/parameters/projectId'
+      responses:
+        200:
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/File'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /projects/{projectId}/files/{fileId}:
+    delete:
+      description: Deletes a file
+      operationId: deleteFile
+      parameters:
+        - in: path
+          name: fileId
+          type: integer
+          required: true
+        - $ref: '#/parameters/projectId'
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /tests:
+    post:
+      description: New test
+      operationId: newTest
+      parameters:
+        - in: body
+          name: test
+          required: true
+          schema:
+            $ref: '#/definitions/Test'
+      responses:
+        200:
+          description: New test
+          schema:
+            $ref: '#/definitions/Test'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+    patch:
+      description: Rename test
+      operationId: renameTest
+      parameters:
+        - in: body
+          name: test
+          required: true
+          schema:
+            $ref: '#/definitions/Test'
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /tests/{testId}:
+    delete:
+      description: Deletes a test
+      operationId: deleteTest
+      parameters:
+        - in: path
+          name: testId
+          type: integer
+          required: true
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /versions:
+    post:
+      description: New testVersion
+      operationId: newTestVersion
+      parameters:
+        - in: body
+          name: testVersion
+          required: true
+          schema:
+            $ref: '#/definitions/TestVersion'
+      responses:
+        200:
+          description: New testVersion
+          schema:
+            $ref: '#/definitions/TestVersion'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /versions/{versionId}:
+    delete:
+      description: Deletes a testVersion
+      operationId: deleteTestVerion
+      parameters:
+        - $ref: '#/parameters/versionId'
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /versions/{versionId}/renameVersion:
+    patch:
+      description: Rename testVersion
+      operationId: renameTestVersion
+      parameters:
+        - in: body
+          name: testVersionRename
+          required: true
+          schema:
+            $ref: '#/definitions/TestVersionRename'
+        - $ref: '#/parameters/versionId'
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /versions/{versionId}/updateCodeAndParse:
+    patch:
+      description: Update code and parse
+      operationId: updateCodeAndParse
+      parameters:
+        - in: body
+          name: updateCodeRequest
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateCodeRequest'
+        - $ref: '#/parameters/versionId'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/VersionParseError'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /versions/{versionIds}/parse:
+    get:
+      description: Parse versions
+      operationId: parse
+      parameters:
+        - in: path
+          name: versionIds
+          description: comma separated versionIds to parse
+          required: true
+          type: array
+          collectionFormat: csv
+          items:
+            type: integer
+      responses:
+        200:
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/VersionParseError'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /projects/{projectId}/versions/{versionId}/dryRun:
+    post:
+      description: Dry run
+      operationId: dryRun
+      parameters:
+        - in: body
+          name: dryRunConfig
+          required: true
+          schema:
+            $ref: '#/definitions/DryRunConfig'
+        - $ref: '#/parameters/projectId'
+        - $ref: '#/parameters/versionId'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/DryRunResult'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /projects/{projectId}/buildVars:
+    post:
+      description: New buildVar
+      operationId: newBuildVar
+      parameters:
+        - in: body
+          name: buildVar
+          required: true
+          schema:
+            $ref: '#/definitions/BuildVar'
+        - $ref: '#/parameters/projectId'
+      responses:
+        200:
+          description: new buildVarId
+          schema:
+            type: integer
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+    patch:
+      description: Update buildVar value
+      operationId: updateBuildVarValue
+      parameters:
+        - in: body
+          name: updateBuildVarRequest
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateBuildVarRequest'
+        - $ref: '#/parameters/projectId'
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+    get:
+      description: Gets all buildVars
+      operationId: getBuildVars
+      parameters:
+        - $ref: '#/parameters/projectId'
+      responses:
+        200:
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/BuildVar'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /projects/{projectId}/buildVars/{buildVarId}:
+    delete:
+      description: Deletes a buildVar
+      operationId: deleteBuildVar
+      parameters:
+        - $ref: '#/parameters/projectId'
+        - in: path
+          name: buildVarId
+          type: integer
+          required: true
+        - in: query
+          name: isPrimary
+          type: boolean
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /projects/{projectId}/globalVars:
+    post:
+      description: New globalVar
+      operationId: newGlobalVar
+      parameters:
+        - in: body
+          name: globalVar
+          required: true
+          schema:
+            $ref: '#/definitions/GlobalVar'
+        - $ref: '#/parameters/projectId'
+      responses:
+        200:
+          description: new globalVarId
+          schema:
+            type: integer
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+    patch:
+      description: Update globalVar value
+      operationId: updateGlobalVarValue
+      parameters:
+        - in: body
+          name: updateGlobalVarRequest
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateGlobalVarRequest'
+        - $ref: '#/parameters/projectId'
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+    get:
+      description: Gets all globalVars
+      operationId: getGloalVars
+      parameters:
+        - $ref: '#/parameters/projectId'
+      responses:
+        200:
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/GlobalVar'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /projects/{projectId}/globalVars/{globalVarId}:
+    delete:
+      description: Deletes a globalVar
+      operationId: deleteGlobalVar
+      parameters:
+        - $ref: '#/parameters/projectId'
+        - in: path
+          name: globalVarId
+          type: integer
+          required: true
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /platforms/{platform}/browsers:
+    get:
+      description: Gets all browsers for platform
+      operationId: getBrowsers
+      parameters:
+        - in: path
+          required: true
+          type: string
+          name: platform
+      responses:
+        200:
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/BrowserNameToVersions'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /projects/{projectId}/builds:
+    post:
+      description: New build
+      operationId: newBuild
+      parameters:
+        - in: body
+          name: buildRunConfig
+          required: true
+          schema:
+            $ref: '#/definitions/BuildRunConfig'
+        - $ref: '#/parameters/projectId'
+      responses:
+        200:
+          description: responds with NewBuildResponse
+          schema:
+            $ref: '#/definitions/NewBuildResponse'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /builds/{buildId}/stopBuild:
+    patch:
+      description: Stop running build
+      operationId: stopBuild
+      parameters:
+        - $ref: '#/parameters/buildId'
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /builds/{buildId}/versions/{versionId}/getBuildStatusOutput:
+    get:
+      description: Gets build's status and output
+      operationId: getBuildStatusOutput
+      parameters:
+        - $ref: '#/parameters/buildId'
+        - $ref: '#/parameters/versionId'
+        - in: query
+          required: false
+          name: nextOutputToken
+          type: string
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/BuildStatusOutput'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /builds/{buildId}/getLatestShot:
+    get:
+      description: Gets latest shot for build
+      operationId: getLatestShot
+      parameters:
+        - $ref: '#/parameters/buildId'
+      responses:
+        200:
+          description: latest shot name
+          schema:
+            type: string
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /builds/{buildId}/getShotBasicDetails:
+    get:
+      description: Gets basic shot details for build and optional versionId
+      operationId: getShotBasicDetails
+      parameters:
+        - $ref: '#/parameters/buildId'
+        - in: query
+          required: false
+          name: versionId
+          type: integer
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/ShotBasicDetails'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /builds/{buildId}/getCapturedBuildCapability:
+    get:
+      description: Gets capture buildCapability for build
+      operationId: getCapturedBuildCapability
+      parameters:
+        - $ref: '#/parameters/buildId'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/BuildCapability'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /builds/{buildId}/getCapturedBuildVars:
+    get:
+      description: Gets capture buildVars for build
+      operationId: getCapturedBuildVars
+      parameters:
+        - $ref: '#/parameters/buildId'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/CapturedVariable'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /builds/{buildId}/getCapturedGlobalVars:
+    get:
+      description: Gets capture globalVars for build
+      operationId: getCapturedGlobalVars
+      parameters:
+        - $ref: '#/parameters/buildId'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/CapturedVariable'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /builds/{buildId}/getRunnerPreferences:
+    get:
+      description: Gets runnerPreferences
+      operationId: getRunnerPreferences
+      parameters:
+        - $ref: '#/parameters/buildId'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/RunnerPreferences'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /builds/{buildId}/getBuildBasicDetails:
+    get:
+      description: Gets buildBasicDetails for build
+      operationId: getBuildBasicDetails
+      parameters:
+        - $ref: '#/parameters/buildId'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/BuildBasicDetails'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /builds/{buildId}/getDriverLogs:
+    get:
+      description: Gets driver logs
+      operationId: getDriverLogs
+      parameters:
+        - $ref: '#/parameters/buildId'
+      responses:
+        200:
+          description: OK
+          schema:
+            type: string
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /builds/{buildId}/getPerformanceLogs:
+    get:
+      description: Gets performances logs
+      operationId: getPerformanceLogs
+      parameters:
+        - $ref: '#/parameters/buildId'
+      responses:
+        200:
+          description: OK
+          schema:
+            type: string
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /builds/{buildId}/getElementShotNames:
+    get:
+      description: Gets element shot names
+      operationId: getElementShotNames
+      parameters:
+        - $ref: '#/parameters/buildId'
+      responses:
+        200:
+          description: OK
+          schema:
+            type: array
+            items:
+              type: string
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
 securityDefinitions:
   firebase:
     authorizationUrl: ""
@@ -26,3 +859,428 @@ securityDefinitions:
     x-google-audiences: "zl-front-end"
 security:
   - firebase: []
+parameters:
+  projectId:
+    in: path
+    name: projectId
+    type: integer
+    required: true
+  buildId:
+    in: path
+    name: buildId
+    type: integer
+    required: true
+  versionId:
+    in: path
+    name: versionId
+    type: integer
+    required: true
+  fileName:
+    in: path
+    name: fileName
+    type: string
+    required: true
+  buildCapabilityId:
+    in: path
+    name: buildCapabilityId
+    type: integer
+    required: true
+definitions:
+  LineInfo:
+    type: object
+    properties:
+      line:
+        type: integer
+      ch:
+        type: integer
+  RunError:
+    type: object
+    properties:
+      msg:
+        type: string
+      from:
+        $ref: '#/definitions/LineInfo'
+      to:
+        $ref: '#/definitions/LineInfo'
+  BuildStatusOutput:
+    type: object
+    properties:
+      status:
+        type: string
+        enum: [RUNNING, ERROR, STOPPED, ABORTED, SUCCESS]
+      currentLine:
+        type: integer
+      output:
+        type: string
+      nextOutputToken:
+        type: string
+      timeTaken:
+        type: integer
+        format: int64
+      error:
+        $ref: '#/definitions/RunError'
+  CapturedVariable:
+    type: object
+    properties:
+      key:
+        type: string
+      value:
+        type: string
+  BuildBasicDetails:
+    type: object
+    properties:
+      os:
+        type: string
+      browserName:
+        type: string
+      browserVersion:
+        type: string
+      resolution:
+        type: string
+      timezone:
+        type: string
+      buildCapsName:
+        type: string
+      shotBucket:
+        type: string
+      allDoneDate:
+        type: string
+        format: date-time
+      driverLogsAvailable:
+        type: boolean
+      perfLogsAvailable:
+        type: boolean
+      elemShotsAvailable:
+        type: boolean
+  ShotBasicDetails:
+    type: object
+    properties:
+      totalShots:
+        type: integer
+        format: int64
+      firstShot:
+        type: string
+      lastShot:
+        type: string
+  BuildIdentifier:
+    type: object
+    properties:
+      buildId:
+        type: integer
+      buildKey:
+        type: string
+  NewBuildResponse:
+    type: object
+    properties:
+      buildIdentifier:
+        $ref: '#/definitions/BuildIdentifier'
+      sessionId:
+        type: string
+  RunnerPreferences:
+    type: object
+    properties:
+      abortOnFailure:
+        type: boolean
+      aetKeepSingleWindow:
+        type: boolean
+      aetUpdateUrlBlank:
+        type: boolean
+      aetResetTimeouts:
+        type: boolean
+      aetDeleteAllCookies:
+        type: boolean
+  BuildRunConfig:
+    type: object
+    required:
+      - buildCapabilityId
+      - displayResolution
+      - timezone
+      - versionIds
+    properties:
+      buildCapabilityId:
+        type: integer
+      displayResolution:
+        type: string
+      timezone:
+        type: string
+      selectedBuildVarIdPerKey:
+        type: object
+        additionalProperties:
+          type: integer
+      runnerPreferences:
+        $ref: '#/definitions/RunnerPreferences'
+      buildSourceType:
+        type: string
+        enum: [IDE, CI, NOT_IDE]
+      versionIds:
+        type: array
+        items:
+          type: integer
+  BrowserNameToVersions:
+    type: object
+    properties:
+      name:
+        type: string
+      versions:
+        type: array
+        items:
+          type: string
+  GlobalVar:
+    type: object
+    required:
+      - key
+      - value
+    properties:
+      id:
+        type: integer
+      key:
+        type: string
+      value:
+        type: string
+  UpdateGlobalVarRequest:
+    type: object
+    required:
+      - value
+      - globalVarId
+    properties:
+      value:
+        type: string
+      globalVarId:
+        type: integer
+  BuildVar:
+    type: object
+    required:
+      - key
+      - value
+    properties:
+      id:
+        type: integer
+      key:
+        type: string
+      value:
+        type: string
+      isPrimary:
+        type: boolean
+  UpdateBuildVarRequest:
+    type: object
+    required:
+      - columnId
+      - value
+      - buildVarId
+    properties:
+      columnId:
+        type: string
+      value:
+        type: string
+      buildVarId:
+        type: integer
+  Project:
+    type: object
+    required:
+      - name
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+  TestVersion:
+    type: object
+    required:
+      - name
+      - testId
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+      testId:
+        type: integer
+      code:
+        type: string
+      isCurrent:
+        type: boolean
+  Test:
+    type: object
+    required:
+      - name
+      - fileId
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+      fileId:
+        type: integer
+      versions:
+        type: array
+        items:
+          $ref: '#/definitions/TestVersion'
+  File:
+    type: object
+    required:
+      - name
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+      tests:
+        type: array
+        items:
+          $ref: '#/definitions/Test'
+  TestVersionRename:
+    type: object
+    required:
+      - name
+      - testId
+    properties:
+      name:
+        type: string
+      testId:
+        type: integer
+  VersionParseError:
+    type: object
+    properties:
+      versionId:
+        type: integer
+      error:
+        $ref: '#/definitions/RunError'
+  UpdateCodeRequest:
+    type: object
+    required:
+      - code
+    properties:
+      code:
+        type: string
+  DryRunResult:
+    type: object
+    properties:
+      timeTaken:
+        type: integer
+        format: int64
+      output:
+        type: string
+      error:
+        $ref: '#/definitions/RunError'
+  Browser:
+    type: object
+    required:
+      - name
+      - version
+    properties:
+      name:
+        type: string
+      version:
+        type: string
+  DryRunConfig:
+    type: object
+    required:
+      - platform
+      - selectedBuildVarIdPerKey
+    properties:
+      browser:
+        $ref: '#/definitions/Browser'
+      platform:
+        type: string
+      selectedBuildVarIdPerKey:
+        type: object
+        additionalProperties:
+          type: integer
+  FileIdentifier:
+    type: object
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+  ApiError:
+    type: object
+    required:
+      - message
+    properties:
+      message:
+        type: string
+  TestFile:
+    type: object
+    properties:
+      name:
+        type: string
+      size:
+        type: string
+      createDate:
+        type: string
+  SendIssueRequest:
+    type: object
+    required:
+      - desc
+    properties:
+      desc:
+        type: string
+      fileName:
+        type: string
+  BuildCapabilityIdentifier:
+    type: object
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+  BuildCapability:
+    type: object
+    required:
+      - name
+      - serverOs
+      - wdBrowserName
+      - wdBrowserVersion
+      - wdPlatformName
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+      serverOs:
+        type: string
+      wdBrowserName:
+        type: string
+      wdBrowserVersion:
+        type: string
+      wdPlatformName:
+        type: string
+      wdAcceptInsecureCerts:
+        type: boolean
+      wdTimeoutsScript:
+        type: integer
+      wdTimeoutsPageLoad:
+        type: integer
+      wdTimeoutsElementAccess:
+        type: integer
+      wdStrictFileInteractability:
+        type: boolean
+      wdUnhandledPromptBehavior:
+        type: string
+      wdIeElementScrollBehavior:
+        type: string
+      wdIeEnablePersistentHovering:
+        type: boolean
+      wdIeRequireWindowFocus:
+        type: boolean
+      wdIeDisableNativeEvents:
+        type: boolean
+      wdIeDestructivelyEnsureCleanSession:
+        type: boolean
+      wdIeLogLevel:
+        type: string
+      wdChromeVerboseLogging:
+        type: boolean
+      wdChromeSilentOutput:
+        type: boolean
+      wdChromeEnableNetwork:
+        type: boolean
+      wdChromeEnablePage:
+        type: boolean
+      wdFirefoxLogLevel:
+        type: string
+      wdBrwStartMaximize:
+        type: boolean
+      createDateFormatted:
+        type: string

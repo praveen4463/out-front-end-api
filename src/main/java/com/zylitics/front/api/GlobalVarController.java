@@ -35,20 +35,11 @@ public class GlobalVarController extends AbstractController {
   @SuppressWarnings("unused")
   @PatchMapping
   public ResponseEntity<Void> updateValue(
-      @RequestBody @Validated UpdateRequest updateRequest,
+      @RequestBody @Validated UpdateGlobalVarRequest updateGlobalVarRequest,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
   ) {
-    globalVarProvider.updateValue(updateRequest.getValue(),
-        updateRequest.getGlobalVarId(), getUserId(userInfo));
-    return ResponseEntity.ok().build();
-  }
-  
-  @DeleteMapping("/{globalVarId}")
-  public ResponseEntity<Void> deleteGlobalVar(
-      @PathVariable @Min(1) int globalVarId,
-      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
-  ) {
-    globalVarProvider.deleteGlobalVar(globalVarId, getUserId(userInfo));
+    globalVarProvider.updateValue(updateGlobalVarRequest.getValue(),
+        updateGlobalVarRequest.getGlobalVarId(), getUserId(userInfo));
     return ResponseEntity.ok().build();
   }
   
@@ -60,8 +51,17 @@ public class GlobalVarController extends AbstractController {
     return ResponseEntity.ok(globalVarProvider.getGlobalVars(projectId, getUserId(userInfo)));
   }
   
+  @DeleteMapping("/{globalVarId}")
+  public ResponseEntity<Void> deleteGlobalVar(
+      @PathVariable @Min(1) int globalVarId,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
+  ) {
+    globalVarProvider.deleteGlobalVar(globalVarId, getUserId(userInfo));
+    return ResponseEntity.ok().build();
+  }
+  
   @Validated
-  private static class UpdateRequest {
+  private static class UpdateGlobalVarRequest {
     
     @NotBlank
     private String value;
@@ -73,7 +73,7 @@ public class GlobalVarController extends AbstractController {
       return value;
     }
   
-    public UpdateRequest setValue(String value) {
+    public UpdateGlobalVarRequest setValue(String value) {
       this.value = value;
       return this;
     }
@@ -83,7 +83,7 @@ public class GlobalVarController extends AbstractController {
     }
   
     @SuppressWarnings("unused")
-    public UpdateRequest setGlobalVarId(int globalVarId) {
+    public UpdateGlobalVarRequest setGlobalVarId(int globalVarId) {
       this.globalVarId = globalVarId;
       return this;
     }

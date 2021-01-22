@@ -79,7 +79,7 @@ public class TestFileController extends AbstractController {
     Preconditions.checkNotNull(blob, fileName + " doesn't exists");
     return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,
         "attachment; filename=\"" + fileName + "\"")
-        .body(blob.getContent());
+        .body(new FileDownload().download(blob));
   }
   
   @DeleteMapping("/{fileName}")

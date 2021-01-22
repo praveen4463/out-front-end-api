@@ -1,7 +1,5 @@
 package com.zylitics.front.api;
 
-import com.google.common.base.Splitter;
-import com.google.common.base.Strings;
 import com.zylitics.front.model.File;
 import com.zylitics.front.model.FileIdentifier;
 import com.zylitics.front.provider.FileProvider;
@@ -12,9 +10,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.constraints.Min;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("${app-short-version}/projects/{projectId}/files")
@@ -54,6 +50,8 @@ public class FileController extends AbstractController {
     return ResponseEntity.ok(fileProvider.getFilesWithTests(fIds, getUserId(userInfo)));
   }
   
+  // These endpoints are wrong, fileId should be coming from path and it should accept field that
+  // need patch
   @SuppressWarnings("unused")
   @PatchMapping
   public ResponseEntity<Void> renameFile(

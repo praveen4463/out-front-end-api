@@ -201,7 +201,8 @@ public class BuildController extends AbstractController {
     }
   }
   
-  @DeleteMapping("/builds/{buildId}")
+  @SuppressWarnings("unused")
+  @PatchMapping("/builds/{buildId}/stopBuild")
   public ResponseEntity<?> stopBuild(
       @PathVariable @Min(1) int buildId,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
@@ -273,14 +274,13 @@ public class BuildController extends AbstractController {
   }
   
   @GetMapping("/builds/{buildId}/getLatestShot")
-  public ResponseEntity<LatestShotResponse> getLatestShot(
+  public ResponseEntity<String> getLatestShot(
       @PathVariable @Min(1) int buildId,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
   ) {
     buildProvider.verifyUsersBuild(buildId, getUserId(userInfo));
     Optional<String> latestShot = shotProvider.getLatestShot(buildId);
-    return latestShot.map(s -> ResponseEntity.ok(new LatestShotResponse().setShotName(s)))
-        .orElseGet(() -> ResponseEntity.ok().build());
+    return latestShot.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.ok().build());
   }
   
   @GetMapping("/builds/{buildId}/getShotBasicDetails")
@@ -380,7 +380,7 @@ public class BuildController extends AbstractController {
   }
   
   @GetMapping("/builds/{buildId}/getDriverLogs")
-  public ResponseEntity<LogsResponse> getDriverLogs(
+  public ResponseEntity<String> getDriverLogs(
       @PathVariable @Min(1) int buildId,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
   ) {
@@ -391,7 +391,7 @@ public class BuildController extends AbstractController {
   }
   
   @GetMapping("/builds/{buildId}/getPerformanceLogs")
-  public ResponseEntity<LogsResponse> getPerformanceLogs(
+  public ResponseEntity<String> getPerformanceLogs(
       @PathVariable @Min(1) int buildId,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
   ) {
@@ -404,7 +404,7 @@ public class BuildController extends AbstractController {
   // TODO: I am sending log file contents as String, being log files can be large, there may be
   //  issues both at api and client. Keep a watch and may be later we will have to lazy load the
   //  file or give just option to download.
-  private ResponseEntity<LogsResponse> sendLogsResponse(int buildId, int userId, Blob blob) {
+  private ResponseEntity<String> sendLogsResponse(int buildId, int userId, Blob blob) {
     buildProvider.verifyUsersBuild(buildId, userId);
     if (blob == null) {
       return ResponseEntity.ok().build();
@@ -412,11 +412,11 @@ public class BuildController extends AbstractController {
     byte[] file = new FileDownload().download(blob);
     // send a cached response as these files are immutable
     return Common.addCacheControlPublic(ResponseEntity.ok())
-        .body(new LogsResponse().setLog(new String(file, StandardCharsets.UTF_8)));
+        .body(new String(file, StandardCharsets.UTF_8));
   }
   
   @GetMapping("/builds/{buildId}/getElementShotNames")
-  public ResponseEntity<ElementShotsResponse> getElementShotNames(
+  public ResponseEntity<List<String>> getElementShotNames(
       @PathVariable @Min(1) int buildId,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
   ) {
@@ -428,15 +428,14 @@ public class BuildController extends AbstractController {
     while (elementShotIterator.hasNext()) {
       Blob blob = elementShotIterator.next();
       if (blob.getName().endsWith(".png")) {
-        shots.add(blob.getName().replace(buildDir + "/", ""));
+        shots.add(CommonUtil.getStorageFileNameWithoutPrefix(blob.getName()));
       }
     }
     if (shots.size() == 0) {
       return ResponseEntity.ok().build();
     }
     // send a cached response as shot list is immutable
-    return Common.addCacheControlPublic(ResponseEntity.ok())
-        .body(new ElementShotsResponse().setShotNames(shots));
+    return Common.addCacheControlPublic(ResponseEntity.ok()).body(shots);
   }
   
   private Blob getDriverLogsBlob(APICoreProperties.Storage storageProps, String buildDir) {
@@ -457,54 +456,10 @@ public class BuildController extends AbstractController {
                                                 String buildDir) {
     Page<Blob> elementShotsBlobs = storage.list(storageProps.getElemShotsBucket(),
         Storage.BlobListOption.prefix(buildDir));
-    return elementShotsBlobs.getValues().iterator();
+    return elementShotsBlobs.iterateAll().iterator();
   }
   
   private void markBuildRequestCompleted(long buildRequestId) {
     buildRequestProvider.markBuildRequestCompleted(buildRequestId);
-  }
-  
-  private static class LatestShotResponse {
-    
-    private String shotName;
-  
-    @SuppressWarnings("unused")
-    public String getShotName() {
-      return shotName;
-    }
-  
-    public LatestShotResponse setShotName(String shotName) {
-      this.shotName = shotName;
-      return this;
-    }
-  }
-  
-  private static class LogsResponse {
-    
-    private String log;
-  
-    @SuppressWarnings("unused")
-    public String getLog() {
-      return log;
-    }
-  
-    public LogsResponse setLog(String log) {
-      this.log = log;
-      return this;
-    }
-  }
-  
-  private static class ElementShotsResponse {
-    
-    private List<String> shotNames;
-  
-    public List<String> getShotNames() {
-      return shotNames;
-    }
-  
-    public ElementShotsResponse setShotNames(List<String> shotNames) {
-      this.shotNames = shotNames;
-      return this;
-    }
   }
 }

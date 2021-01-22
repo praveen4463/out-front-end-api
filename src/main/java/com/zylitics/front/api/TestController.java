@@ -27,6 +27,8 @@ public class TestController extends AbstractController {
     return ResponseEntity.ok(testProvider.newTest(test, getUserId(userInfo)));
   }
   
+  // These endpoints are wrong, fileId should be coming from path and it should accept field that
+  // need patch
   @SuppressWarnings("unused")
   @PatchMapping
   public ResponseEntity<Void> renameTest(
@@ -38,7 +40,7 @@ public class TestController extends AbstractController {
   }
   
   @DeleteMapping("/{testId}")
-  public ResponseEntity<Void> deleteFile(
+  public ResponseEntity<Void> deleteTest(
       @PathVariable @Min(1) int testId,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
   ) {

@@ -35,13 +35,21 @@ public class BuildVarController extends AbstractController {
   @SuppressWarnings("unused")
   @PatchMapping
   public ResponseEntity<Void> updateBuildVar(
-      @RequestBody @Validated UpdateRequest updateRequest,
+      @RequestBody @Validated UpdateBuildVarRequest updateBuildVarRequest,
       @PathVariable @Min(1) int projectId,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
   ) {
-    buildVarProvider.updateBuildVar(updateRequest.getColumnId(),
-        updateRequest.getValue(), updateRequest.getBuildVarId(), projectId, getUserId(userInfo));
+    buildVarProvider.updateBuildVar(updateBuildVarRequest.getColumnId(),
+        updateBuildVarRequest.getValue(), updateBuildVarRequest.getBuildVarId(), projectId, getUserId(userInfo));
     return ResponseEntity.ok().build();
+  }
+  
+  @GetMapping
+  public ResponseEntity<List<BuildVar>> getBuildVars(
+      @PathVariable @Min(1) int projectId,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
+  ) {
+    return ResponseEntity.ok(buildVarProvider.getBuildVars(projectId, getUserId(userInfo), false));
   }
   
   @DeleteMapping("/{buildVarId}")
@@ -55,16 +63,8 @@ public class BuildVarController extends AbstractController {
     return ResponseEntity.ok().build();
   }
   
-  @GetMapping
-  public ResponseEntity<List<BuildVar>> getBuildVars(
-      @PathVariable @Min(1) int projectId,
-      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
-  ) {
-    return ResponseEntity.ok(buildVarProvider.getBuildVars(projectId, getUserId(userInfo), false));
-  }
-  
   @Validated
-  private static class UpdateRequest {
+  private static class UpdateBuildVarRequest {
     
     @NotBlank
     private String columnId;
@@ -80,7 +80,7 @@ public class BuildVarController extends AbstractController {
     }
   
     @SuppressWarnings("unused")
-    public UpdateRequest setColumnId(String columnId) {
+    public UpdateBuildVarRequest setColumnId(String columnId) {
       this.columnId = columnId;
       return this;
     }
@@ -89,7 +89,7 @@ public class BuildVarController extends AbstractController {
       return value;
     }
     
-    public UpdateRequest setValue(String value) {
+    public UpdateBuildVarRequest setValue(String value) {
       this.value = value;
       return this;
     }
@@ -99,7 +99,7 @@ public class BuildVarController extends AbstractController {
     }
   
     @SuppressWarnings("unused")
-    public UpdateRequest setBuildVarId(int buildVarId) {
+    public UpdateBuildVarRequest setBuildVarId(int buildVarId) {
       this.buildVarId = buildVarId;
       return this;
     }
