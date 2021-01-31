@@ -2,6 +2,9 @@ package com.zylitics.front.api;
 
 import com.google.cloud.storage.Storage;
 import com.zylitics.front.config.APICoreProperties;
+import com.zylitics.front.model.EmailInfo;
+import com.zylitics.front.model.PlainTextEmail;
+import com.zylitics.front.services.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -17,12 +20,17 @@ public class IssueController extends AbstractController {
   
   private final Storage storage;
   
-  private final APICoreProperties.Storage storageProps;
+  private final APICoreProperties apiCoreProperties;
+  
+  private final EmailService emailService;
   
   @Autowired
-  public IssueController(Storage storage, APICoreProperties apiCoreProperties) {
+  public IssueController(Storage storage,
+                         APICoreProperties apiCoreProperties,
+                         EmailService emailService) {
     this.storage = storage;
-    this.storageProps = apiCoreProperties.getStorage();
+    this.apiCoreProperties = apiCoreProperties;
+    this.emailService = emailService;
   }
   
   @SuppressWarnings("unused")
@@ -32,6 +40,7 @@ public class IssueController extends AbstractController {
                                          @RequestHeader(USER_INFO_REQ_HEADER) String userInfo)
       throws Exception {
     int userId = getUserId(userInfo);
+    APICoreProperties.Storage storageProps = apiCoreProperties.getStorage();
     // we'll append a uuid to fileName to keep it unique within a user dir but will send just
     // file name with the email as client is unknown about the added uuid.
     new FileUpload(storage, storageProps.getCommonUploadsBucket(), file,
@@ -46,11 +55,14 @@ public class IssueController extends AbstractController {
       @RequestBody @Validated SendIssueRequest sendIssueRequest,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo) {
     int userId = getUserId(userInfo);
-    System.out.println(sendIssueRequest.getFileName() +
-        sendIssueRequest.getDesc() + userId + " issue is sent");
-    // TODO: send an email with subject: Issue report send by user: USER_ID
-    //  and in body the desc and in the end:
-    //  attached file (if available): FILE_NAME
+    APICoreProperties.Email emailProps = apiCoreProperties.getEmail();
+    emailService.send(new PlainTextEmail()
+        .setFrom(emailProps.getAppInternalEmailSender())
+        .setTo(emailProps.getIssueReportReceiver())
+        .setSubject("Issue report sent by user: " + userId)
+        .setContent(sendIssueRequest.getDesc() +
+            "\nAttached file (if any): " + sendIssueRequest.getFileName()));
+    // even if we couldn't send email, send a success as we'd record an error and read that.
     return ResponseEntity.ok().build();
   }
   

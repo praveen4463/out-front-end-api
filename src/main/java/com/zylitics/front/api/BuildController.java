@@ -4,6 +4,7 @@ import com.google.api.gax.paging.Page;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.Storage;
+import com.google.common.base.Preconditions;
 import com.zylitics.front.config.APICoreProperties;
 import com.zylitics.front.exception.UnauthorizedException;
 import com.zylitics.front.model.*;
@@ -126,12 +127,14 @@ public class BuildController extends AbstractController {
     long buildRequestId = buildRequestProvider.newBuildRequest(new BuildRequest()
         .setBuildSourceType(sourceType).setUserId(userId));
     try {
-      User user = userProvider.getUser(userId)
+      User user = userProvider.getUserWithPlan(userId)
           .orElseThrow(() -> new UnauthorizedException("User not found"));
+      UsersPlan usersPlan = user.getUsersPlan();
+      Preconditions.checkArgument(usersPlan != null);
       List<BuildRequest> buildRequests = buildRequestProvider.getCurrentBuildRequests(userId);
       int totalBuildRequests = buildRequests.size();
   
-      if (totalBuildRequests > user.getTotalParallel()) {
+      if (totalBuildRequests > usersPlan.getTotalParallel()) {
         markBuildRequestCompleted(buildRequestId);
         return sendError(HttpStatus.TOO_MANY_REQUESTS, "Total parallel builds limit reached." +
             " If you're starting several builds together, please slow down and wait for few" +
@@ -146,8 +149,8 @@ public class BuildController extends AbstractController {
               " been processed");
         }
       }
-      if (user.getPlanType() == PlanType.FREE &&
-          user.getTotalMinutes() - user.getConsumedMinutes() < 1) {
+      if (usersPlan.getPlanType() == PlanType.FREE &&
+          usersPlan.getTotalMinutes() - usersPlan.getConsumedMinutes() < 1) {
         markBuildRequestCompleted(buildRequestId);
         return sendError(HttpStatus.FORBIDDEN, "You've exhausted plan's minutes quota" +
             ", please upgrade or contact us for additional testing minutes");

@@ -1,5 +1,7 @@
 package com.zylitics.front.model;
 
+import javax.annotation.Nullable;
+
 public class User {
   
   private int id;
@@ -12,17 +14,16 @@ public class User {
   
   private String timezone;
   
-  private String role;
+  private Role role;
+  
+  private int organizationId;
   
   private String shotBucketSessionStorage;
   
-  private PlanType planType;
+  private long emailVerificationId;
   
-  private int consumedMinutes;
-  
-  private int totalParallel;
-  
-  private int totalMinutes;
+  @Nullable
+  private UsersPlan usersPlan;
   
   public int getId() {
     return id;
@@ -69,11 +70,11 @@ public class User {
     return this;
   }
   
-  public String getRole() {
+  public Role getRole() {
     return role;
   }
   
-  public User setRole(String role) {
+  public User setRole(Role role) {
     this.role = role;
     return this;
   }
@@ -87,39 +88,31 @@ public class User {
     return this;
   }
   
-  public PlanType getPlanType() {
-    return planType;
+  public int getOrganizationId() {
+    return organizationId;
   }
   
-  public User setPlanType(PlanType planType) {
-    this.planType = planType;
+  public User setOrganizationId(int organizationId) {
+    this.organizationId = organizationId;
     return this;
   }
   
-  public int getConsumedMinutes() {
-    return consumedMinutes;
+  public long getEmailVerificationId() {
+    return emailVerificationId;
   }
   
-  public User setConsumedMinutes(int consumedMinutes) {
-    this.consumedMinutes = consumedMinutes;
+  public User setEmailVerificationId(long emailVerificationId) {
+    this.emailVerificationId = emailVerificationId;
     return this;
   }
   
-  public int getTotalParallel() {
-    return totalParallel;
+  @Nullable
+  public UsersPlan getUsersPlan() {
+    return usersPlan;
   }
   
-  public User setTotalParallel(int totalParallel) {
-    this.totalParallel = totalParallel;
-    return this;
-  }
-  
-  public int getTotalMinutes() {
-    return totalMinutes;
-  }
-  
-  public User setTotalMinutes(int totalMinutes) {
-    this.totalMinutes = totalMinutes;
+  public User setUsersPlan(UsersPlan usersPlan) {
+    this.usersPlan = usersPlan;
     return this;
   }
 }

@@ -12,6 +12,8 @@
 # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.14/#deployment-v1-apps
 # !! Take care before an update is sent, read here how updates work
 #    https://kubernetes.io/docs/tasks/manage-kubernetes-objects/declarative-config/
+# TODO: store firebase service account as kube secrets and point FIREBASE_SA to it. This env variable
+#   should be accessible to zl-front
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -42,13 +44,14 @@ spec:
         - name: esp
           image: gcr.io/endpoints-release/endpoints-runtime:1
           # TODO: test this service endpoint by calling service within cluster.
+          # TODO: if cors_allow_origin doesn't work with multiple origins, use --cors_allow_origin_regex
           args: [
               "--http_port=4000",
               "--backend=127.0.0.1:8080",
               "--service=front.api.zylitics.io",
               "--rollout_strategy=managed",
               "--cors_preset=basic",
-              "--cors_allow_origin=https://zylitics.io"
+              "--cors_allow_origin=https://zylitics.io, https://docs.zylitics.io, https://about.zylitics.io"
           ]
           ports:
             - containerPort: 4000

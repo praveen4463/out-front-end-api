@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
+import javax.annotation.Nullable;
 import java.util.Base64;
 
 public abstract class AbstractController {
@@ -98,8 +99,17 @@ public abstract class AbstractController {
   }
   
   protected ResponseEntity<ApiError> sendError(HttpStatus status, String errorMsg) {
+    return sendError(status, errorMsg, null);
+  }
+  
+  /**
+   * @param causeType Use it to send additional status about error when there is no specific
+   *                  HttpStatus available for the particular error.
+   */
+  protected ResponseEntity<ApiError> sendError(HttpStatus status, String errorMsg,
+                                               @Nullable Enum<?> causeType) {
     return ResponseEntity
         .status(status)
-        .body(new ApiError().setMessage(errorMsg));
+        .body(new ApiError().setMessage(errorMsg).setCauseType(causeType));
   }
 }

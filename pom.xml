@@ -15,6 +15,8 @@
     <jib-maven-plugin.version>2.6.0</jib-maven-plugin.version>
     <stackdriver-logback.version>0.118.7-alpha</stackdriver-logback.version>
     <zwl.version>0.4.1-SNAPSHOT</zwl.version>
+    <sendgrid.version>4.7.1</sendgrid.version>
+    <firebase-admin.version>7.1.0</firebase-admin.version>
 
     <projectId>zl-win-nodes</projectId>
     <skipTest>false</skipTest>
@@ -74,6 +76,16 @@
     <dependency>
       <groupId>org.hibernate.validator</groupId>
       <artifactId>hibernate-validator</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.sendgrid</groupId>
+      <artifactId>sendgrid-java</artifactId>
+      <version>${sendgrid.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.firebase</groupId>
+      <artifactId>firebase-admin</artifactId>
+      <version>${firebase-admin.version}</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>

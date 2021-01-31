@@ -42,6 +42,11 @@ class SqlParamsBuilder {
     return this;
   }
   
+  SqlParamsBuilder withInteger(String name, Integer value) {
+    params.put(name, new SqlParameterValue(Types.INTEGER, value));
+    return this;
+  }
+  
   SqlParamsBuilder withOther(String name, Object value) {
     params.put(name, new SqlParameterValue(Types.OTHER, value));
     return this;

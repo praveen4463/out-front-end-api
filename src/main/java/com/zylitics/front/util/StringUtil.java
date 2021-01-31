@@ -1,5 +1,7 @@
 package com.zylitics.front.util;
 
+import org.elasticsearch.common.Strings;
+
 public class StringUtil {
   
   /**
@@ -9,5 +11,9 @@ public class StringUtil {
    */
   public static boolean isBlank(String s) {
     return s == null || s.replaceAll("\\s\\n\\t\\r", "").length() == 0;
+  }
+  
+  public static boolean isValidEmail(String email) {
+    return !Strings.isNullOrEmpty(email) && email.matches("^[^@]+@[^@]+$");
   }
 }

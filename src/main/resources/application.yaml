@@ -1,6 +1,7 @@
 ---
 api-core:
   project-id: zl-win-nodes
+  front-end-base-url: https://zylitics.io
   cloud-kms:
     key-ring: zl-apps-auth-secret
     key: default-prod
@@ -39,7 +40,29 @@ api-core:
   services:
     wzgp-endpoint: http://wzgp.api.internal.zylitics.io
     wzgp-version: beta
+    wzgp-auth-user: prod-test
+    wzgp-auth-secret-cloud-file: zl-wzgp-prod-test-auth.encrypt
     btbr-version: beta
     btbr-port: 8080
+    btbr-auth-user: root
+    btbr-auth-secret-cloud-file: btbr-api-key.encrypted
     local-vm-env-var: VM_LOCAL
+    sendgrid-api-key-secret-cloud-file: sendgrid-primary-mail-sender.encrypted
+  email:
+    issue-report-receiver: emp1@zylitics.io
+    app-internal-email-sender: internal@zylitics.io
+    no-reply-email-sender: noreply@zylitics.io
+    email-beta-invite-tmp-id: d-283d2eb137f5409f8e8cc1337429319e
+    email-team-invite-tmp-id: d-d836d47b1a4a460f978ff27d0dcdea71
+    email-beta-welcome-tmp-id: d-4315d05c14b740ab9678da7273c109ec
+    email-welcome-tmp-id: d-ab81d5d789e84570ad68e00884acb0c3
+    email-change-tmp-id: d-9e208f6fe5ba4ab69d181cb3c3714d4b
+    email-pwd-reset-tmp-id: d-d2787d44dd2742879c19dafc4cf10977
+    email-verify-tmp-id: d-5cc358a3cc0d4b3faf9d1f487064ef47
+    finish-signup-page: /finish-signup
+    pwd-reset-page: /rest-pwd
+    email-change-page: /change-email
+    cta-link-tag: c2a_link
+    marketing-email-group-id: 15323
+    notification-email-group-id: 15319
 ---

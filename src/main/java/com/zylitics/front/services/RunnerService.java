@@ -1,5 +1,6 @@
 package com.zylitics.front.services;
 
+import com.zylitics.front.SecretsManager;
 import com.zylitics.front.config.APICoreProperties;
 import com.zylitics.front.util.UrlChecker;
 import org.springframework.http.HttpStatus;
@@ -11,6 +12,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
 
 import java.time.Duration;
+import java.util.Base64;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -25,12 +27,19 @@ public class RunnerService {
   private final APICoreProperties apiCoreProperties;
   
   public RunnerService(WebClient.Builder webClientBuilder,
+                       SecretsManager secretsManager,
                        APICoreProperties apiCoreProperties) {
     this.apiCoreProperties = apiCoreProperties;
+    APICoreProperties.Services services = apiCoreProperties.getServices();
+    String secret = secretsManager.getSecretAsPlainText(services.getBtbrAuthSecretCloudFile());
+    String btbrUserAuthHeader = Base64.getEncoder().encodeToString((services.getBtbrAuthUser()
+        + ":" + secret).getBytes());
     HttpClient httpClient = HttpClient.create()
         .responseTimeout(Duration.ofMinutes(RESPONSE_TIMEOUT_MIN));
     this.webClient = webClientBuilder
-        .clientConnector(new ReactorClientHttpConnector(httpClient)).build();
+        .clientConnector(new ReactorClientHttpConnector(httpClient))
+        .defaultHeader("Authorization", btbrUserAuthHeader)
+        .build();
   }
   
   public String newSession(String runnerIP, int buildId) {

@@ -1,9 +1,13 @@
 package com.zylitics.front;
 
+import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.FirebaseOptions;
+import com.google.firebase.auth.FirebaseAuth;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zylitics.front.api.VMService;
@@ -27,6 +31,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import javax.sql.DataSource;
+import java.io.FileInputStream;
 
 // TODO: I am not too sure what DataAccessExceptions should be re-tried, let's first watch logs and
 //  decide if retry can help recovering from them. Hikari automatically retries until connection
@@ -37,6 +42,8 @@ import javax.sql.DataSource;
 //  https://docs.spring.io/spring/docs/current/spring-framework-reference/data-access.html#dao-exceptions
 @SpringBootApplication
 public class Launcher {
+  
+  private static final String FIREBASE_SERVICE_ACCOUNT_KEY = "FIREBASE_SA";
   
   public static void main(String[] args) {
     SpringApplication.run(Launcher.class, args);
@@ -124,13 +131,32 @@ public class Launcher {
   @Bean
   @Profile("production")
   VMService productionVMService(APICoreProperties apiCoreProperties,
-                                WebClient.Builder webClientBuildeer) {
-    return new ProductionVMService(webClientBuildeer, apiCoreProperties);
+                                WebClient.Builder webClientBuilder,
+                                SecretsManager secretsManager) {
+    return new ProductionVMService(webClientBuilder, apiCoreProperties, secretsManager);
   }
   
   @Bean
   @Profile("e2e")
   VMService localVMService(APICoreProperties apiCoreProperties) {
     return new LocalVMService(apiCoreProperties);
+  }
+  
+  @Bean
+  @Profile({"production", "e2e"})
+  FirebaseApp firebaseApp() throws Exception {
+    String firebaseSAKey = System.getenv(FIREBASE_SERVICE_ACCOUNT_KEY);
+    Preconditions.checkArgument(!Strings.isNullOrEmpty(firebaseSAKey),
+        FIREBASE_SERVICE_ACCOUNT_KEY + " env. variable is not set.");
+    FirebaseOptions options = FirebaseOptions.builder()
+        .setCredentials(GoogleCredentials.fromStream(new FileInputStream(firebaseSAKey))).build();
+  
+    return FirebaseApp.initializeApp(options);
+  }
+  
+  @Bean
+  @Profile({"production", "e2e"})
+  FirebaseAuth firebaseAuth(FirebaseApp firebaseApp) {
+    return FirebaseAuth.getInstance(firebaseApp);
   }
 }

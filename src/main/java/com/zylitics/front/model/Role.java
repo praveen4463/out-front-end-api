@@ -1,7 +1,7 @@
 package com.zylitics.front.model;
 
-public enum PlanType {
+public enum Role {
   
-  FREE,
-  PAID
+  ADMIN,
+  DEVELOPER
 }

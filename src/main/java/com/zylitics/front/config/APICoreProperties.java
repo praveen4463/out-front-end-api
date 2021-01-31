@@ -1,5 +1,6 @@
 package com.zylitics.front.config;
 
+import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.annotation.Validated;
@@ -35,6 +36,19 @@ public class APICoreProperties {
     }
   }
   
+  @NotBlank
+  private String frontEndBaseUrl;
+  
+  public String getFrontEndBaseUrl() {
+    return frontEndBaseUrl;
+  }
+  
+  public void setFrontEndBaseUrl(String frontEndBaseUrl) {
+    if (this.frontEndBaseUrl == null) {
+      this.frontEndBaseUrl = frontEndBaseUrl;
+    }
+  }
+  
   @Valid
   private final DataSource dataSource = new DataSource();
   
@@ -59,6 +73,11 @@ public class APICoreProperties {
   private final Services services = new Services();
   
   public Services getServices() { return services; }
+  
+  @Valid
+  private final Email email = new Email();
+  
+  public Email getEmail() { return email; }
   
   public static class DataSource {
     
@@ -420,12 +439,27 @@ public class APICoreProperties {
     
     @NotBlank
     private String btbrVersion;
+  
+    @NotBlank
+    private String wzgpAuthUser;
+  
+    @NotBlank
+    private String wzgpAuthSecretCloudFile;
     
     @Min(1)
     private Integer btbrPort;
   
     @NotBlank
+    private String btbrAuthUser;
+  
+    @NotBlank
+    private String btbrAuthSecretCloudFile;
+  
+    @NotBlank
     private String localVmEnvVar;
+    
+    @NotBlank
+    private String sendgridApiKeySecretCloudFile;
     
     public String getWzgpEndpoint() {
       return wzgpEndpoint;
@@ -444,6 +478,26 @@ public class APICoreProperties {
     public void setWzgpVersion(String wzgpVersion) {
       if (this.wzgpVersion == null) {
         this.wzgpVersion = wzgpVersion;
+      }
+    }
+  
+    public String getWzgpAuthUser() {
+      return wzgpAuthUser;
+    }
+  
+    public void setWzgpAuthUser(String wzgpAuthUser) {
+      if (this.wzgpAuthUser == null) {
+        this.wzgpAuthUser = wzgpAuthUser;
+      }
+    }
+  
+    public String getWzgpAuthSecretCloudFile() {
+      return wzgpAuthSecretCloudFile;
+    }
+  
+    public void setWzgpAuthSecretCloudFile(String wzgpAuthSecretCloudFile) {
+      if (this.wzgpAuthSecretCloudFile == null) {
+        this.wzgpAuthSecretCloudFile = wzgpAuthSecretCloudFile;
       }
     }
     
@@ -467,13 +521,254 @@ public class APICoreProperties {
       }
     }
   
+    public String getBtbrAuthUser() {
+      return btbrAuthUser;
+    }
+  
+    public void setBtbrAuthUser(String btbrAuthUser) {
+      if (this.btbrAuthUser == null) {
+        this.btbrAuthUser = btbrAuthUser;
+      }
+    }
+  
+    public String getBtbrAuthSecretCloudFile() {
+      return btbrAuthSecretCloudFile;
+    }
+  
+    public void setBtbrAuthSecretCloudFile(String btbrAuthSecretCloudFile) {
+      if (this.btbrAuthSecretCloudFile == null) {
+        this.btbrAuthSecretCloudFile = btbrAuthSecretCloudFile;
+      }
+    }
+  
     public String getLocalVmEnvVar() {
       return localVmEnvVar;
     }
   
-    public Services setLocalVmEnvVar(String localVmEnvVar) {
-      this.localVmEnvVar = localVmEnvVar;
+    public void setLocalVmEnvVar(String localVmEnvVar) {
+      if (this.localVmEnvVar == null) {
+        this.localVmEnvVar = localVmEnvVar;
+      }
+    }
+  
+    public String getSendgridApiKeySecretCloudFile() {
+      return sendgridApiKeySecretCloudFile;
+    }
+  
+    public void setSendgridApiKeySecretCloudFile(String sendgridApiKeySecretCloudFile) {
+      if (this.sendgridApiKeySecretCloudFile == null) {
+        this.sendgridApiKeySecretCloudFile = sendgridApiKeySecretCloudFile;
+      }
+    }
+  }
+  
+  public static class Email {
+    
+    @NotBlank
+    private String issueReportReceiver;
+  
+    @NotBlank
+    private String appInternalEmailSender;
+  
+    @NotBlank
+    private String noReplyEmailSender;
+  
+    @NotBlank
+    private String emailBetaInviteTmpId;
+  
+    @NotBlank
+    private String emailTeamInviteTmpId;
+  
+    @NotBlank
+    private String emailBetaWelcomeTmpId;
+  
+    @NotBlank
+    private String emailWelcomeTmpId;
+  
+    @NotBlank
+    private String emailChangeTmpId;
+  
+    @NotBlank
+    private String emailPwdResetTmpId;
+  
+    @NotBlank
+    private String emailVerifyTmpId;
+    
+    @NotBlank
+    private String finishSignupPage;
+  
+    @NotBlank
+    private String pwdResetPage;
+  
+    @NotBlank
+    private String emailChangePage;
+  
+    @NotBlank
+    private String ctaLinkTag;
+  
+    @NotBlank
+    private Integer marketingEmailGroupId;
+  
+    @NotBlank
+    private Integer notificationEmailGroupId;
+  
+    public String getIssueReportReceiver() {
+      return issueReportReceiver;
+    }
+  
+    public void setIssueReportReceiver(String issueReportReceiver) {
+      if (this.issueReportReceiver == null) {
+        this.issueReportReceiver = issueReportReceiver;
+      }
+    }
+  
+    public String getAppInternalEmailSender() {
+      return appInternalEmailSender;
+    }
+  
+    public void setAppInternalEmailSender(String appInternalEmailSender) {
+      if (this.appInternalEmailSender == null) {
+        this.appInternalEmailSender = appInternalEmailSender;
+      }
+    }
+  
+    public String getNoReplyEmailSender() {
+      return noReplyEmailSender;
+    }
+  
+    public void setNoReplyEmailSender(String noReplyEmailSender) {
+      if (this.noReplyEmailSender == null) {
+        this.noReplyEmailSender = noReplyEmailSender;
+      }
+    }
+  
+    public String getEmailBetaInviteTmpId() {
+      return emailBetaInviteTmpId;
+    }
+  
+    public void setEmailBetaInviteTmpId(String emailBetaInviteTmpId) {
+      if (this.emailBetaInviteTmpId == null) {
+        this.emailBetaInviteTmpId = emailBetaInviteTmpId;
+      }
+    }
+  
+    public String getEmailTeamInviteTmpId() {
+      return emailTeamInviteTmpId;
+    }
+  
+    public void setEmailTeamInviteTmpId(String emailTeamInviteTmpId) {
+      if (this.emailTeamInviteTmpId == null) {
+        this.emailTeamInviteTmpId = emailTeamInviteTmpId;
+      }
+    }
+  
+    public String getEmailBetaWelcomeTmpId() {
+      return emailBetaWelcomeTmpId;
+    }
+  
+    public Email setEmailBetaWelcomeTmpId(String emailBetaWelcomeTmpId) {
+      this.emailBetaWelcomeTmpId = emailBetaWelcomeTmpId;
       return this;
+    }
+  
+    public String getEmailWelcomeTmpId() {
+      return emailWelcomeTmpId;
+    }
+  
+    public void setEmailWelcomeTmpId(String emailWelcomeTmpId) {
+      if (this.emailWelcomeTmpId == null) {
+        this.emailWelcomeTmpId = emailWelcomeTmpId;
+      }
+    }
+  
+    public String getEmailChangeTmpId() {
+      return emailChangeTmpId;
+    }
+  
+    public void setEmailChangeTmpId(String emailChangeTmpId) {
+      if (this.emailChangeTmpId == null) {
+        this.emailChangeTmpId = emailChangeTmpId;
+      }
+    }
+  
+    public String getEmailPwdResetTmpId() {
+      return emailPwdResetTmpId;
+    }
+  
+    public void setEmailPwdResetTmpId(String emailPwdResetTmpId) {
+      if (this.emailPwdResetTmpId == null) {
+        this.emailPwdResetTmpId = emailPwdResetTmpId;
+      }
+    }
+  
+    public String getEmailVerifyTmpId() {
+      return emailVerifyTmpId;
+    }
+  
+    public void setEmailVerifyTmpId(String emailVerifyTmpId) {
+      if (this.emailVerifyTmpId == null) {
+        this.emailVerifyTmpId = emailVerifyTmpId;
+      }
+    }
+  
+    public String getFinishSignupPage() {
+      return finishSignupPage;
+    }
+  
+    public void setFinishSignupPage(String finishSignupPage) {
+      if (this.finishSignupPage == null) {
+        this.finishSignupPage = finishSignupPage;
+      }
+    }
+  
+    public String getPwdResetPage() {
+      return pwdResetPage;
+    }
+  
+    public void setPwdResetPage(String pwdResetPage) {
+      if (this.pwdResetPage == null) {
+        this.pwdResetPage = pwdResetPage;
+      }
+    }
+  
+    public String getEmailChangePage() {
+      return emailChangePage;
+    }
+  
+    public void setEmailChangePage(String emailChangePage) {
+      if (this.emailChangePage == null) {
+        this.emailChangePage = emailChangePage;
+      }
+    }
+  
+    public String getCtaLinkTag() {
+      return ctaLinkTag;
+    }
+  
+    public void setCtaLinkTag(String ctaLinkTag) {
+      if (this.ctaLinkTag == null) {
+        this.ctaLinkTag = ctaLinkTag;
+      }
+    }
+  
+    public int getMarketingEmailGroupId() {
+      return marketingEmailGroupId;
+    }
+  
+    public void setMarketingEmailGroupId(Integer marketingEmailGroupId) {
+      if (this.marketingEmailGroupId == null) {
+        this.marketingEmailGroupId = marketingEmailGroupId;
+      }
+    }
+  
+    public int getNotificationEmailGroupId() {
+      return notificationEmailGroupId;
+    }
+  
+    public void setNotificationEmailGroupId(Integer notificationEmailGroupId) {
+      if (this.notificationEmailGroupId == null) {
+        this.notificationEmailGroupId = notificationEmailGroupId;
+      }
     }
   }
 }
