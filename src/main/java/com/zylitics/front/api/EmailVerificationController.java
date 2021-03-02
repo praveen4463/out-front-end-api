@@ -24,7 +24,7 @@ import java.util.UUID;
 
 // users in this api will be anonymous and they should be deleted at client side after they're converted
 @RestController
-@RequestMapping("${app-short-version}/emailVerification")
+@RequestMapping("${app-short-version}/emailVerifications")
 public class EmailVerificationController extends AbstractController {
   
   private static final Logger LOG = LoggerFactory.getLogger(EmailVerificationController.class);
@@ -55,12 +55,27 @@ public class EmailVerificationController extends AbstractController {
   // a list to encourage parallel requests completing earlier than one by one
   @PostMapping
   public ResponseEntity<?> sendEmailVerification(
-      @RequestBody @Validated EmailVerificationRequest emailVerificationRequest) {
+      @RequestBody @Validated EmailVerificationRequest emailVerificationRequest,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo) {
     if (emailVerificationRequest.getOrganizationId() != null) {
       Preconditions.checkArgument(emailVerificationRequest.getSenderName() != null
               && emailVerificationRequest.getOrganizationName() != null
               && emailVerificationRequest.getRole() != null, "Insufficient arguments supplied" +
           " while sending verification email");
+    }
+    if (emailVerificationRequest.getEmailVerificationUserType()
+        == EmailVerificationUserType.IN_ORGANIZATION) {
+      int userId = getUserId(userInfo);
+      Organization organization = organizationProvider.getOrganizationOfUser(userId);
+      if (organization.getId() != emailVerificationRequest.getOrganizationId()
+          || !organization.getName().equals(emailVerificationRequest.getOrganizationName())) {
+        return sendError(HttpStatus.UNAUTHORIZED, "Given organization doesn't belong to user");
+      }
+    } else if (emailVerificationRequest.getEmailVerificationUserType()
+        == EmailVerificationUserType.BETA_INVITEE) {
+      assertZyliticsAdminUser(userInfo);
+    } else {
+      assertAnonymousUser(userInfo);
     }
     String email = emailVerificationRequest.getEmail();
     Preconditions.checkArgument(StringUtil.isValidEmail(email));
@@ -85,7 +100,7 @@ public class EmailVerificationController extends AbstractController {
     if (emailVerificationRequest.getSenderName() != null) {
       emailInfo.setFromName(emailVerificationRequest.getSenderName());
     }
-    String ctaLink = String.format("%s?code=%s",
+    String ctaLink = String.format("%s/%s",
         apiCoreProperties.getFrontEndBaseUrl() + emailProps.getFinishSignupPage(), code);
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
     builder.put(emailProps.getCtaLinkTag(), ctaLink);
@@ -125,13 +140,23 @@ public class EmailVerificationController extends AbstractController {
   }
   
   @PatchMapping("/{code}/validate")
-  public ResponseEntity<?> validateEmailVerification(@PathVariable @NotBlank String code) {
+  public ResponseEntity<?> validateEmailVerification(
+      @PathVariable @NotBlank String code,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo) {
+    assertAnonymousUser(userInfo);
     Optional<EmailVerification> emailVerificationOptional =
         emailVerificationProvider.getEmailVerification(code);
     if (!emailVerificationOptional.isPresent()) {
       throw new IllegalArgumentException("Can't identify verification link, the code is invalid");
     }
     EmailVerification emailVerification = emailVerificationOptional.get();
+    // check whether email is in system, checked again here so that if some user sends
+    // themselves multiple signup email, completes one of them and later click on others, we reject
+    // them with proper error.
+    if (userProvider.userWithEmailExist(emailVerification.getEmail())) {
+      return sendError(HttpStatus.UNPROCESSABLE_ENTITY, "A user with this email already exists",
+          EmailApiErrorCause.EMAIL_ALREADY_EXIST);
+    }
     if (emailVerification.isUsed()) {
       return sendError(HttpStatus.FORBIDDEN, "This link can be used just once");
     }
@@ -144,6 +169,7 @@ public class EmailVerificationController extends AbstractController {
               emailVerification.getOrganizationId())).getName();
     }
     return ResponseEntity.ok(new ValidateEmailVerificationResponse(emailVerification.getId(),
-        emailVerification.getEmail(), organizationName));
+        emailVerification.getEmail(), emailVerification.getEmailVerificationUserType(),
+        organizationName));
   }
 }

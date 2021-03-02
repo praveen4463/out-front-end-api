@@ -1,8 +1,7 @@
 package com.zylitics.front.model;
 
-import java.time.LocalDateTime;
-
-public class UsersPlan {
+// dates are in long as all our dates returned to front end are in epoch seconds
+public class UsersPlanResponse {
   
   private PlanType planType;
   
@@ -16,15 +15,15 @@ public class UsersPlan {
   
   private int totalMinutes;
   
-  private LocalDateTime billingCycleStart;
+  private long billingCycleStart;
   
-  private LocalDateTime billingCyclePlannedEnd;
+  private long billingCyclePlannedEnd;
   
   public PlanType getPlanType() {
     return planType;
   }
   
-  public UsersPlan setPlanType(PlanType planType) {
+  public UsersPlanResponse setPlanType(PlanType planType) {
     this.planType = planType;
     return this;
   }
@@ -33,7 +32,7 @@ public class UsersPlan {
     return planName;
   }
   
-  public UsersPlan setPlanName(String planName) {
+  public UsersPlanResponse setPlanName(String planName) {
     this.planName = planName;
     return this;
   }
@@ -42,7 +41,7 @@ public class UsersPlan {
     return displayName;
   }
   
-  public UsersPlan setDisplayName(String displayName) {
+  public UsersPlanResponse setDisplayName(String displayName) {
     this.displayName = displayName;
     return this;
   }
@@ -51,7 +50,7 @@ public class UsersPlan {
     return consumedMinutes;
   }
   
-  public UsersPlan setConsumedMinutes(int consumedMinutes) {
+  public UsersPlanResponse setConsumedMinutes(int consumedMinutes) {
     this.consumedMinutes = consumedMinutes;
     return this;
   }
@@ -60,7 +59,7 @@ public class UsersPlan {
     return totalParallel;
   }
   
-  public UsersPlan setTotalParallel(int totalParallel) {
+  public UsersPlanResponse setTotalParallel(int totalParallel) {
     this.totalParallel = totalParallel;
     return this;
   }
@@ -69,25 +68,25 @@ public class UsersPlan {
     return totalMinutes;
   }
   
-  public UsersPlan setTotalMinutes(int totalMinutes) {
+  public UsersPlanResponse setTotalMinutes(int totalMinutes) {
     this.totalMinutes = totalMinutes;
     return this;
   }
   
-  public LocalDateTime getBillingCycleStart() {
+  public long getBillingCycleStart() {
     return billingCycleStart;
   }
   
-  public UsersPlan setBillingCycleStart(LocalDateTime billingCycleStart) {
+  public UsersPlanResponse setBillingCycleStart(long billingCycleStart) {
     this.billingCycleStart = billingCycleStart;
     return this;
   }
   
-  public LocalDateTime getBillingCyclePlannedEnd() {
+  public long getBillingCyclePlannedEnd() {
     return billingCyclePlannedEnd;
   }
   
-  public UsersPlan setBillingCyclePlannedEnd(LocalDateTime billingCyclePlannedEnd) {
+  public UsersPlanResponse setBillingCyclePlannedEnd(long billingCyclePlannedEnd) {
     this.billingCyclePlannedEnd = billingCyclePlannedEnd;
     return this;
   }

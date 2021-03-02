@@ -1,6 +1,6 @@
 package com.zylitics.front.util;
 
-import org.elasticsearch.common.Strings;
+import com.google.common.base.Strings;
 
 public class StringUtil {
   

@@ -2,10 +2,7 @@ package com.zylitics.front.util;
 
 import javax.annotation.Nullable;
 import java.sql.Timestamp;
-import java.time.Clock;
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 
 public class DateTimeUtil {
@@ -35,6 +32,10 @@ public class DateTimeUtil {
       return null;
     }
     return timestamp.toLocalDateTime();
+  }
+  
+  public static long utcTimeToEpochSecs(LocalDateTime localDateTime) {
+    return localDateTime.toInstant(ZoneOffset.UTC).getEpochSecond();
   }
   
   public static String getFrondEndDisplayDate(LocalDateTime dateTime) {

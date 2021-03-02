@@ -2,6 +2,9 @@ package com.zylitics.front.api;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthException;
+import com.google.firebase.auth.UserRecord;
 import com.zylitics.front.config.APICoreProperties;
 import com.zylitics.front.model.*;
 import com.zylitics.front.provider.PasswordResetProvider;
@@ -16,7 +19,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Size;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
@@ -24,7 +29,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("${app-short-version}/passwordReset")
+@RequestMapping("${app-short-version}/passwordResets")
 public class PasswordResetController extends AbstractController {
   
   private static final Logger LOG = LoggerFactory.getLogger(PasswordResetController.class);
@@ -37,15 +42,19 @@ public class PasswordResetController extends AbstractController {
   
   private final UserProvider userProvider;
   
+  private final FirebaseAuth firebaseAuth;
+  
   private final EmailService emailService;
   
   public PasswordResetController(APICoreProperties apiCoreProperties,
                                  PasswordResetProvider passwordResetProvider,
                                  UserProvider userProvider,
+                                 FirebaseAuth firebaseAuth,
                                  EmailService emailService) {
     this.apiCoreProperties = apiCoreProperties;
     this.passwordResetProvider = passwordResetProvider;
     this.userProvider = userProvider;
+    this.firebaseAuth = firebaseAuth;
     this.emailService = emailService;
   }
   
@@ -55,6 +64,9 @@ public class PasswordResetController extends AbstractController {
   using the current password and email, and if succeeded, invoke firebase.updatePassword
   When forget password is chosen, even if user has entered an email that doesn't exist, we don't
   show error but just tell user. they should get an email if this email is registered.
+  
+  Password resets could be done when user is logged in or out and thus I've not take userInfo header
+  or checked anonymous user.
    */
   @PostMapping
   public ResponseEntity<?> sendPasswordReset(
@@ -75,7 +87,7 @@ public class PasswordResetController extends AbstractController {
     EmailInfo emailInfo = new EmailInfo()
         .setFrom(emailProps.getNoReplyEmailSender())
         .setTo(email);
-    String ctaLink = String.format("%s?code=%s",
+    String ctaLink = String.format("%s/%s",
         apiCoreProperties.getFrontEndBaseUrl() + emailProps.getPwdResetPage(), code);
     Map<String, Object> templateData = ImmutableMap.of(emailProps.getCtaLinkTag(), ctaLink);
     SendTemplatedEmail sendTemplatedEmail = new SendTemplatedEmail(emailInfo,
@@ -83,6 +95,8 @@ public class PasswordResetController extends AbstractController {
     boolean result = emailService.send(sendTemplatedEmail);
     if (!result) {
       LOG.error("Priority: Couldn't send a password reset email to user: " + userId);
+      // we tried sending to an existing email but failed that's why we ask user not to try again
+      // rather than asking 'if you think email is incorrect...'
       String errMsg = "An error occurred while sending an email. There is no need to try again." +
           " Please wait for sometime and check your inbox. It" +
           " may take us a few hours to try resending it.";
@@ -93,7 +107,8 @@ public class PasswordResetController extends AbstractController {
   }
   
   @PatchMapping("/{code}/validate")
-  public ResponseEntity<?> validatePasswordReset(@PathVariable @NotBlank String code) {
+  public ResponseEntity<?> validatePasswordReset(
+      @PathVariable @NotBlank String code) {
     Optional<PasswordReset> passwordResetOptional =
         passwordResetProvider.getPasswordReset(code);
     if (!passwordResetOptional.isPresent()) {
@@ -110,5 +125,51 @@ public class PasswordResetController extends AbstractController {
     passwordResetProvider.updateToUsed(passwordReset.getId());
     return ResponseEntity.ok(new ValidatePasswordResetResponse(passwordReset.getId(),
         userProvider.getUserEmail(passwordReset.getUserId())));
+  }
+  
+  @SuppressWarnings("unused")
+  @PatchMapping("/{passwordResetId}/resetPassword")
+  public ResponseEntity<?> resetPassword(
+      @RequestBody @Validated ResetPasswordRequest resetPasswordRequest,
+      @PathVariable @Min(1) long passwordResetId) {
+    Optional<PasswordReset> passwordResetOptional =
+        passwordResetProvider.getPasswordReset(passwordResetId);
+    if (!passwordResetOptional.isPresent()) {
+      throw new IllegalArgumentException("Invalid passwordResetId passed to resetPassword: " +
+          passwordResetId);
+    }
+    PasswordReset passwordReset = passwordResetOptional.get();
+    String password = resetPasswordRequest.getPassword().trim();
+    Preconditions.checkArgument(password.length() >= 6, "Password requirement not met");
+    try {
+      firebaseAuth.updateUser(new UserRecord.UpdateRequest(
+          Integer.toString(passwordReset.getUserId()))
+          .setPassword(password));
+    } catch (FirebaseAuthException f) {
+      LOG.error("Priority: Couldn't reset user password in firebase, userId: " +
+          passwordReset.getUserId(), f);
+      return sendError(HttpStatus.INTERNAL_SERVER_ERROR, "There was an error resetting your" +
+          " password. We've been notified and this should be fixed very soon. Please try" +
+          " resetting again in a few hours or contact us if you see a similar problem.");
+    }
+    return ResponseEntity.ok().build();
+  }
+  
+  @Validated
+  private static class ResetPasswordRequest {
+    
+    @NotBlank
+    @Size(min = 6)
+    private String password;
+    
+    @SuppressWarnings("unused")
+    public String getPassword() {
+      return password;
+    }
+    
+    public ResetPasswordRequest setPassword(String password) {
+      this.password = password;
+      return this;
+    }
   }
 }

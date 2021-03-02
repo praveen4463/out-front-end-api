@@ -17,14 +17,17 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 @Service
 public class EmailService {
@@ -61,15 +64,36 @@ public class EmailService {
   }
   
   public boolean send(PlainTextEmail plain) {
-    Mail mail = new Mail(
+    return send(buildEmail(plain));
+  }
+  
+  public void sendAsync(PlainTextEmail plain,
+                        @Nullable Consumer<ResponseEntity<Void>> onSuccess,
+                        @Nullable Consumer<Void> onFailure) {
+    Mail mail = buildEmail(plain);
+    sendAsync(mail, onSuccess, onFailure);
+  }
+  
+  public boolean send(SendTemplatedEmail sendTemplatedEmail) {
+    return send(buildEmail(sendTemplatedEmail));
+  }
+  
+  public void sendAsync(SendTemplatedEmail sendTemplatedEmail,
+                        @Nullable Consumer<ResponseEntity<Void>> onSuccess,
+                        @Nullable Consumer<Void> onFailure) {
+    Mail mail = buildEmail(sendTemplatedEmail);
+    sendAsync(mail, onSuccess, onFailure);
+  }
+  
+  private Mail buildEmail(PlainTextEmail plain) {
+    return new Mail(
         new Email(plain.getFrom()),
         plain.getSubject(),
         new Email(plain.getTo()),
         new Content(MediaType.TEXT_PLAIN_VALUE, plain.getContent()));
-    return send(mail);
   }
   
-  public boolean send(SendTemplatedEmail sendTemplatedEmail) {
+  private Mail buildEmail(SendTemplatedEmail sendTemplatedEmail) {
     Mail mail = new Mail();
     EmailInfo emailInfo = sendTemplatedEmail.getEmailInfo();
     mail.setFrom(new Email(emailInfo.getFrom(), emailInfo.getFromName()));
@@ -83,10 +107,10 @@ public class EmailService {
       mail.setASM(asm);
     }
     Personalization personalization = new Personalization();
-    personalization.addTo(new Email(emailInfo.getTo(), emailInfo.getFromName()));
-    Map<String, Object> templateData = sendTemplatedEmail.getTemplateData();
-    if (templateData == null) {
-      templateData = new HashMap<>();
+    personalization.addTo(new Email(emailInfo.getTo(), emailInfo.getToName()));
+    Map<String, Object> templateData = new HashMap<>(); // don't mutate, create new
+    if (sendTemplatedEmail.getTemplateData() != null) {
+      templateData.putAll(sendTemplatedEmail.getTemplateData());
     }
     // add default template data
     if (templateData.get("year") == null) {
@@ -94,28 +118,54 @@ public class EmailService {
     }
     templateData.forEach(personalization::addDynamicTemplateData);
     mail.addPersonalization(personalization);
-    return send(mail);
+    return mail;
+  }
+  
+  private String mailToString(Mail mail) {
+    try {
+      return mail.build();
+    } catch (IOException io) {
+      LOG.error("Couldn't build mail", io); // log and then throw so that if the caller was async
+      throw new RuntimeException("Couldn't build mail", io);
+    }
   }
   
   private boolean send(Mail mail) {
     try {
       ResponseEntity<Void> response = webClient.post()
           .uri(MAIL_SEND_ENDPOINT)
-          .bodyValue(mail.build())
+          .bodyValue(mailToString(mail))
           .retrieve().toBodilessEntity().block();
       Objects.requireNonNull(response);
       return isSuccess(response.getStatusCode());
     } catch (Throwable t) {
-      try {
-        LOG.error("Couldn't send plan text mail: " + mail.build(), t);
-      } catch (IOException io) {
-        LOG.error("error while constructing mail");
-      }
+      LOG.error("Couldn't send mail: " + mailToString(mail), t);
       return false;
     }
   }
   
+  private void sendAsync(Mail mail,
+                        @Nullable Consumer<ResponseEntity<Void>> onSuccess,
+                        @Nullable Consumer<Void> onFailure) {
+    Mono<ResponseEntity<Void>> response = webClient.post()
+        .uri(MAIL_SEND_ENDPOINT)
+        .bodyValue(mailToString(mail))
+        .retrieve().toBodilessEntity();
+    response.subscribe((t) -> {
+      if (onSuccess != null) {
+        onSuccess.accept(t);
+      }
+    }, (t) -> {
+      // first accept and then log error so that any error in building email doesn't have effect
+      // on callback
+      if (onFailure != null) {
+        onFailure.accept(null);
+      }
+      LOG.error("Couldn't send mail: " + mailToString(mail), t);
+    });
+  }
+  
   private boolean isSuccess(HttpStatus status) {
-    return status == HttpStatus.OK || status == HttpStatus.CREATED;
+    return status == HttpStatus.OK || status == HttpStatus.CREATED || status == HttpStatus.ACCEPTED;
   }
 }

@@ -8,17 +8,17 @@ public class ValidateEmailVerificationResponse {
   
   private final String email;
   
+  private final EmailVerificationUserType emailVerificationUserType;
+  
   @Nullable
   private final String organizationName;
   
-  public ValidateEmailVerificationResponse(long emailVerificationId, String email) {
-    this(emailVerificationId, email, null);
-  }
-  
   public ValidateEmailVerificationResponse(long emailVerificationId, String email,
+                                           EmailVerificationUserType emailVerificationUserType,
                                            @Nullable String organizationName) {
     this.emailVerificationId = emailVerificationId;
     this.email = email;
+    this.emailVerificationUserType = emailVerificationUserType;
     this.organizationName = organizationName;
   }
   
@@ -28,6 +28,10 @@ public class ValidateEmailVerificationResponse {
   
   public String getEmail() {
     return email;
+  }
+  
+  public EmailVerificationUserType getEmailVerificationUserType() {
+    return emailVerificationUserType;
   }
   
   @Nullable

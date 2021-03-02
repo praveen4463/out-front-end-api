@@ -54,7 +54,7 @@ public class DaoQuotaProvider extends AbstractDaoProvider implements QuotaProvid
         "organization_id)\n" +
         "VALUES (:plan_id, :billing_cycle_start, :billing_cycle_planned_end, :organization_id)";
     int result = jdbc.update(sql, new SqlParamsBuilder()
-        .withInteger("planId", plan.getId())
+        .withInteger("plan_id", plan.getId())
         .withTimestampTimezone("billing_cycle_start", OffsetDateTime.now())
         .withTimestampTimezone("billing_cycle_planned_end",
             getPlannedDate.apply(OffsetDateTime.now(), plan.getDuration()))

@@ -3,6 +3,7 @@ package com.zylitics.front.provider;
 import com.zylitics.front.model.Project;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ProjectProvider {
   
@@ -14,4 +15,10 @@ public interface ProjectProvider {
   int saveNewProject(Project project, int userId);
   
   List<Project> getProjects(int userId);
+  
+  Optional<Project> getProject(int projectId, int userId);
+  
+  void renameProject(String name, int projectId, int userId);
+  
+  void deleteProject(int projectId, int userId);
 }

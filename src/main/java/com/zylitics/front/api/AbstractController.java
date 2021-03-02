@@ -2,6 +2,8 @@ package com.zylitics.front.api;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.zylitics.front.exception.UnauthorizedException;
 import com.zylitics.front.model.ApiError;
 import com.zylitics.front.model.UserFromProxy;
@@ -24,16 +26,43 @@ public abstract class AbstractController {
   
   static final String USER_INFO_REQ_HEADER = "X-Endpoint-API-UserInfo";
   
-  int getUserId(String userInfoHeaderValue) {
+  private UserFromProxy getUserFromProxy(String userInfoHeaderValue) {
     byte[] decoded = Base64.getUrlDecoder().decode(userInfoHeaderValue);
     ObjectMapper mapper = new ObjectMapper();
     mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
     try {
-      UserFromProxy user = mapper.readValue(decoded, UserFromProxy.class);
-      return Integer.parseInt(user.getId());
+      return mapper.readValue(decoded, UserFromProxy.class);
     } catch (Exception ex) {
       throw new RuntimeException(ex);
     }
+  }
+  
+  int getUserId(String userInfoHeaderValue) {
+    UserFromProxy user = getUserFromProxy(userInfoHeaderValue);
+    return Integer.parseInt(user.getId());
+  }
+  
+  void assertAnonymousUser(String userInfoHeaderValue) {
+    UserFromProxy user = getUserFromProxy(userInfoHeaderValue);
+    String id = user.getId();
+    Preconditions.checkArgument(!Strings.isNullOrEmpty(id), "User Id is empty");
+    boolean isString = false;
+    try {
+      Integer.parseInt(id);
+    } catch (NumberFormatException ignore) {
+      isString = true;
+    }
+    Preconditions.checkArgument(isString, "Anonymous uids are not numeric, Given uid doesn't look" +
+        " like an anonymous uid " + id);
+    // when proxy converts token into json, any null values could become string, that's why
+    // comparison to string 'null'
+    Preconditions.checkArgument(user.getEmail() == null || user.getEmail().equals("null"),
+        "Not an anonymous user as it has an email " + user.getEmail());
+  }
+  
+  void assertZyliticsAdminUser(String userInfoHeaderValue) {
+    UserFromProxy user = getUserFromProxy(userInfoHeaderValue);
+    Preconditions.checkArgument(user.getEmail().endsWith("zylitics.io"), "Unauthorized");
   }
   
   /**

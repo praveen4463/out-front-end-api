@@ -127,7 +127,7 @@ public class BuildController extends AbstractController {
     long buildRequestId = buildRequestProvider.newBuildRequest(new BuildRequest()
         .setBuildSourceType(sourceType).setUserId(userId));
     try {
-      User user = userProvider.getUserWithPlan(userId)
+      User user = userProvider.getUser(userId)
           .orElseThrow(() -> new UnauthorizedException("User not found"));
       UsersPlan usersPlan = user.getUsersPlan();
       Preconditions.checkArgument(usersPlan != null);

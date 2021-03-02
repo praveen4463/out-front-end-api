@@ -60,7 +60,7 @@ api-core:
     email-pwd-reset-tmp-id: d-d2787d44dd2742879c19dafc4cf10977
     email-verify-tmp-id: d-5cc358a3cc0d4b3faf9d1f487064ef47
     finish-signup-page: /finish-signup
-    pwd-reset-page: /rest-pwd
+    pwd-reset-page: /reset-pwd
     email-change-page: /change-email
     cta-link-tag: c2a_link
     marketing-email-group-id: 15323

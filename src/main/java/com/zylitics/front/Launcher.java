@@ -1,5 +1,6 @@
 package com.zylitics.front;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
@@ -8,10 +9,13 @@ import com.google.common.base.Strings;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthException;
+import com.google.firebase.auth.FirebaseToken;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zylitics.front.api.VMService;
 import com.zylitics.front.config.APICoreProperties;
+import com.zylitics.front.model.EspErrorResponse;
 import com.zylitics.front.services.LocalVMService;
 import com.zylitics.front.services.ProductionVMService;
 import org.apache.http.HttpHost;
@@ -23,15 +27,26 @@ import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.web.servlet.DelegatingFilterProxyRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import javax.servlet.*;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
+import javax.servlet.http.HttpServletResponse;
 import javax.sql.DataSource;
 import java.io.FileInputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 
 // TODO: I am not too sure what DataAccessExceptions should be re-tried, let's first watch logs and
 //  decide if retry can help recovering from them. Hikari automatically retries until connection
@@ -42,6 +57,8 @@ import java.io.FileInputStream;
 //  https://docs.spring.io/spring/docs/current/spring-framework-reference/data-access.html#dao-exceptions
 @SpringBootApplication
 public class Launcher {
+  
+  private static final String USER_INFO_REQ_HEADER = "X-Endpoint-API-UserInfo";
   
   private static final String FIREBASE_SERVICE_ACCOUNT_KEY = "FIREBASE_SA";
   
@@ -158,5 +175,98 @@ public class Launcher {
   @Profile({"production", "e2e"})
   FirebaseAuth firebaseAuth(FirebaseApp firebaseApp) {
     return FirebaseAuth.getInstance(firebaseApp);
+  }
+  
+  // https://docs.spring.io/spring-boot/docs/2.4.2/reference/htmlsingle/#boot-features-embedded-container
+  // this will let out filter interact with other beans and start lazily
+  @Bean
+  @Profile("e2e")
+  DelegatingFilterProxyRegistrationBean authCheckBean() {
+    return new DelegatingFilterProxyRegistrationBean("authFilter");
+  }
+  
+  // Used for only locally authorizing request, in production ESP does the auth much efficiently.
+  // References:
+  // https://stackoverflow.com/a/2811865/1624454
+  // https://www.oracle.com/java/technologies/filters.html#72674
+  // https://stackoverflow.com/a/19830906/1624454
+  // ESP error response structures and codes references:
+  // https://cloud.google.com/endpoints/docs/openapi/troubleshoot-jwt
+  // https://cloud.google.com/endpoints/docs/openapi/troubleshoot-response-errors
+  // https://cloud.google.com/apis/design/errors
+  @Bean
+  @Profile("e2e")
+  Filter authFilter(FirebaseAuth firebaseAuth) {
+    return (request, response, chain) -> {
+      HttpServletRequest httpServletRequest = (HttpServletRequest) request;
+      HttpServletResponse httpServletResponse = (HttpServletResponse) response;
+      ObjectMapper mapper = new ObjectMapper();
+      try {
+        // Preflight requests must bypass auth check as they don't contain Auth header.
+        // https://stackoverflow.com/a/15734032/1624454
+        if (httpServletRequest.getMethod().equals(HttpMethod.OPTIONS.name())) {
+          chain.doFilter(request, response);
+          return;
+        }
+        String authHeader = httpServletRequest.getHeader(HttpHeaders.AUTHORIZATION);
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+          httpServletResponse.sendError(HttpStatus.UNPROCESSABLE_ENTITY.value());
+          return;
+        }
+        String token = authHeader.split(" ")[1];
+        FirebaseToken decodedToken = firebaseAuth.verifyIdToken(token);
+        // https://cloud.google.com/endpoints/docs/openapi/authenticating-users-firebase
+        // userInfo value is created just like ESP does
+        String userInfo = "{" +
+            String.format("\"id\": \"%s\"", decodedToken.getUid()) +
+            "," +
+            String.format("\"email\": \"%s\"", decodedToken.getEmail()) +
+            "}";
+        String encodedUserInfoHeaderValue = Base64.getUrlEncoder()
+            .encodeToString(userInfo.getBytes(StandardCharsets.UTF_8));
+        HttpServletRequestWrapper requestWrapper = new HttpServletRequestWrapper(httpServletRequest)
+        {
+          @Override
+          public String getHeader(String name) {
+            if (name.equals(USER_INFO_REQ_HEADER)) {
+              return encodedUserInfoHeaderValue;
+            }
+            return super.getHeader(name);
+          }
+  
+          @Override
+          public Enumeration<String> getHeaders(String name) {
+            if (name.equals(USER_INFO_REQ_HEADER)) {
+              return Collections
+                  .enumeration(Collections.singletonList(encodedUserInfoHeaderValue));
+            }
+            return super.getHeaders(name);
+          }
+  
+          @Override
+          public Enumeration<String> getHeaderNames() {
+            List<String> names = Collections.list(super.getHeaderNames());
+            names.add(USER_INFO_REQ_HEADER);
+            return Collections.enumeration(names);
+          }
+        };
+        chain.doFilter(requestWrapper, response);
+      } catch (FirebaseAuthException authException) {
+        System.out.printf("authException occurred: %s, errorCode: %s, authErrorCode: %s%n",
+            authException.getMessage(), authException.getErrorCode(),
+            authException.getAuthErrorCode());
+        // let's assume for now that firebase exception occurs on token expire only
+        EspErrorResponse error = new EspErrorResponse()
+            .setError(new EspErrorResponse.Error().setMessage("TIME_CONSTRAINT_FAILURE"));
+        httpServletResponse.setStatus(HttpStatus.UNAUTHORIZED.value());
+        httpServletResponse.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        httpServletResponse.setHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS, "*");
+        httpServletResponse.setHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS, "*");
+        httpServletResponse.setHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*");
+        mapper.writeValue(httpServletResponse.getWriter(), error);
+      } catch (Exception ex) {
+        throw new RuntimeException(ex);
+      }
+    };
   }
 }

@@ -12,17 +12,18 @@ import javax.validation.constraints.NotBlank;
 import java.util.List;
 
 @RestController
-@RequestMapping("${app-short-version}/browsers")
-public class BrowserController extends AbstractController {
+@RequestMapping("${app-short-version}/platforms")
+public class PlatformController extends AbstractController {
   
   private final BrowserProvider browserProvider;
   
-  public BrowserController(BrowserProvider browserProvider) {
+  public PlatformController(BrowserProvider browserProvider) {
     this.browserProvider = browserProvider;
   }
   
-  @GetMapping()
-  public ResponseEntity<List<BrowserNameToVersions>> getBrowsers() {
-    return ResponseEntity.ok(browserProvider.getBrowsers(null));
+  @GetMapping("/{platform}/getBrowsers")
+  public ResponseEntity<List<BrowserNameToVersions>> getBrowsers(
+      @PathVariable @NotBlank String platform) {
+    return ResponseEntity.ok(browserProvider.getBrowsers(platform));
   }
 }

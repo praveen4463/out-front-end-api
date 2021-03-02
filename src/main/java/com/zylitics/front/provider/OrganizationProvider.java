@@ -9,4 +9,8 @@ public interface OrganizationProvider {
   int newOrganization(String name);
 
   Optional<Organization> getOrganization(int id);
+  
+  Organization getOrganizationOfUser(int userId);
+  
+  void updateOrganizationName(int userId, String name);
 }

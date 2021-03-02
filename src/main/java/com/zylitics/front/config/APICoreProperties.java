@@ -606,10 +606,10 @@ public class APICoreProperties {
     @NotBlank
     private String ctaLinkTag;
   
-    @NotBlank
+    @Min(1)
     private Integer marketingEmailGroupId;
   
-    @NotBlank
+    @Min(1)
     private Integer notificationEmailGroupId;
   
     public String getIssueReportReceiver() {

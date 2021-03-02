@@ -2,7 +2,6 @@ package com.zylitics.front.api;
 
 import com.google.cloud.storage.Storage;
 import com.zylitics.front.config.APICoreProperties;
-import com.zylitics.front.model.EmailInfo;
 import com.zylitics.front.model.PlainTextEmail;
 import com.zylitics.front.services.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,12 +55,12 @@ public class IssueController extends AbstractController {
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo) {
     int userId = getUserId(userInfo);
     APICoreProperties.Email emailProps = apiCoreProperties.getEmail();
-    emailService.send(new PlainTextEmail()
+    emailService.sendAsync(new PlainTextEmail()
         .setFrom(emailProps.getAppInternalEmailSender())
         .setTo(emailProps.getIssueReportReceiver())
         .setSubject("Issue report sent by user: " + userId)
         .setContent(sendIssueRequest.getDesc() +
-            "\nAttached file (if any): " + sendIssueRequest.getFileName()));
+            "\nAttached file (if any): " + sendIssueRequest.getFileName()), null, null);
     // even if we couldn't send email, send a success as we'd record an error and read that.
     return ResponseEntity.ok().build();
   }

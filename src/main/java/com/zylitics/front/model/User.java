@@ -22,6 +22,8 @@ public class User {
   
   private long emailVerificationId;
   
+  @Nullable Organization organization;
+  
   @Nullable
   private UsersPlan usersPlan;
   
@@ -113,6 +115,16 @@ public class User {
   
   public User setUsersPlan(UsersPlan usersPlan) {
     this.usersPlan = usersPlan;
+    return this;
+  }
+  
+  @Nullable
+  public Organization getOrganization() {
+    return organization;
+  }
+  
+  public User setOrganization(@Nullable Organization organization) {
+    this.organization = organization;
     return this;
   }
 }

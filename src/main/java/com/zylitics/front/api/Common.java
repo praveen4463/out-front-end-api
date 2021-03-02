@@ -70,4 +70,8 @@ public class Common {
     }
     return "zl-session-assets-usc"; // default is us-central
   }
+  
+  public static String getUserDisplayName(String firstName, String lastName) {
+    return firstName + " " + lastName;
+  }
 }
