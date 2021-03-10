@@ -1,7 +1,5 @@
 package com.zylitics.front.model;
 
-import java.time.LocalDateTime;
-
 public class UsersPlan {
   
   private PlanType planType;
@@ -16,9 +14,9 @@ public class UsersPlan {
   
   private int totalMinutes;
   
-  private LocalDateTime billingCycleStart;
+  private long billingCycleStart;
   
-  private LocalDateTime billingCyclePlannedEnd;
+  private long billingCyclePlannedEnd;
   
   public PlanType getPlanType() {
     return planType;
@@ -74,20 +72,20 @@ public class UsersPlan {
     return this;
   }
   
-  public LocalDateTime getBillingCycleStart() {
+  public long getBillingCycleStart() {
     return billingCycleStart;
   }
   
-  public UsersPlan setBillingCycleStart(LocalDateTime billingCycleStart) {
+  public UsersPlan setBillingCycleStart(long billingCycleStart) {
     this.billingCycleStart = billingCycleStart;
     return this;
   }
   
-  public LocalDateTime getBillingCyclePlannedEnd() {
+  public long getBillingCyclePlannedEnd() {
     return billingCyclePlannedEnd;
   }
   
-  public UsersPlan setBillingCyclePlannedEnd(LocalDateTime billingCyclePlannedEnd) {
+  public UsersPlan setBillingCyclePlannedEnd(long billingCyclePlannedEnd) {
     this.billingCyclePlannedEnd = billingCyclePlannedEnd;
     return this;
   }

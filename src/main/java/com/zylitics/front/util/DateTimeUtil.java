@@ -40,6 +40,15 @@ public class DateTimeUtil {
     return localDateTime.toInstant(ZoneOffset.UTC).getEpochSecond();
   }
   
+  public static LocalDateTime epochSecsToUTCLocal(long epochSec) {
+    return LocalDateTime.ofEpochSecond(epochSec, 0, ZoneOffset.UTC);
+  }
+  
+  public static long sqlUTCTimestampToEpochSecs(Timestamp timestamp) {
+    Preconditions.checkNotNull(timestamp, "Timestamp can't be null");
+    return utcTimeToEpochSecs(sqlTimestampToLocal(timestamp));
+  }
+  
   public static String getFrondEndDisplayDate(LocalDateTime dateTime) {
     return dateTime.format(DateTimeFormatter.ofPattern("MMM dd, yyyy, h:mm:ss a"));
   }

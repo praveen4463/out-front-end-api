@@ -181,8 +181,8 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
                 .setFinalStatus(TestStatus.valueOf(rs.getString("final_status")))
                 .setError(rs.getString("error"))
                 .setBuildSourceType(BuildSourceType.valueOf(rs.getString("source_type")))
-                .setCreateDate(DateTimeUtil.utcTimeToEpochSecs(
-                    DateTimeUtil.sqlTimestampToLocal(rs.getTimestamp("create_date"))))
+                .setCreateDate(
+                    DateTimeUtil.sqlUTCTimestampToEpochSecs(rs.getTimestamp("create_date")))
                 .setTestTimeMillis(rs.getLong("test_time"))
                 .setTotalSuccess(rs.getInt("total_success"))
                 .setTotalError(rs.getInt("total_error"))
@@ -281,8 +281,8 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
               .setBuildId(buildId)
               .setBuildName(rs.getString("build_name"))
               .setFinalStatus(TestStatus.valueOf(rs.getString("final_status")))
-              .setCreateDate(DateTimeUtil.utcTimeToEpochSecs(
-                  DateTimeUtil.sqlTimestampToLocal(rs.getTimestamp("create_date"))))
+              .setCreateDate(
+                  DateTimeUtil.sqlUTCTimestampToEpochSecs(rs.getTimestamp("create_date")))
               .setTestTimeMillis(rs.getLong("test_time"))
               .setBuildCapsName(rs.getString("caps_name"))
               .setOs(rs.getString("server_os"))

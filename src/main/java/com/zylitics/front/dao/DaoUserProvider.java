@@ -114,8 +114,8 @@ public class DaoUserProvider extends AbstractDaoProvider implements UserProvider
                 .setTotalParallel(rs.getInt("total_parallel"))
                 .setConsumedMinutes(rs.getInt("minutes_consumed"))
                 .setBillingCycleStart(
-                    DateTimeUtil.sqlTimestampToLocal(rs.getTimestamp("billing_cycle_start")))
-                .setBillingCyclePlannedEnd(DateTimeUtil.sqlTimestampToLocal(
+                    DateTimeUtil.sqlUTCTimestampToEpochSecs(rs.getTimestamp("billing_cycle_start")))
+                .setBillingCyclePlannedEnd(DateTimeUtil.sqlUTCTimestampToEpochSecs(
                     rs.getTimestamp("billing_cycle_planned_end")))
             ));
     if (user.size() == 0) {

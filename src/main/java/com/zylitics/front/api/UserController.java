@@ -148,23 +148,13 @@ public class UserController extends AbstractController {
   }
   
   @GetMapping("/current/getUserPlan")
-  public ResponseEntity<UsersPlanResponse> getUserPlan(
+  public ResponseEntity<UsersPlan> getUserPlan(
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo) {
     int userId = getUserId(userInfo);
     UsersPlan userPlan = (userProvider.getUser(userId)
         .orElseThrow(() -> new UnauthorizedException("User not found"))).getUsersPlan();
     Preconditions.checkArgument(userPlan != null);
-    UsersPlanResponse usersPlanResponse = new UsersPlanResponse()
-        .setPlanType(userPlan.getPlanType())
-        .setPlanName(userPlan.getPlanName())
-        .setDisplayName(userPlan.getDisplayName())
-        .setConsumedMinutes(userPlan.getConsumedMinutes())
-        .setTotalParallel(userPlan.getTotalParallel())
-        .setTotalMinutes(userPlan.getTotalMinutes())
-        .setBillingCycleStart(DateTimeUtil.utcTimeToEpochSecs(userPlan.getBillingCycleStart()))
-        .setBillingCyclePlannedEnd(
-            DateTimeUtil.utcTimeToEpochSecs(userPlan.getBillingCyclePlannedEnd()));
-    return ResponseEntity.ok(usersPlanResponse);
+    return ResponseEntity.ok(userPlan);
   }
   
   @PatchMapping("/current/updateUserProfile")

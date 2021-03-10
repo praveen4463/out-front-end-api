@@ -50,6 +50,186 @@ paths:
           description: Unexpected exception
           schema:
             $ref: '#/definitions/ApiError'
+  /projects/{projectId}:
+    get:
+      description: Gets project for given id
+      operationId: getProject
+      parameters:
+        - $ref: '#/parameters/projectId'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/Project'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+    delete:
+      description: Delete project using given id
+      operationId: deleteProject
+      parameters:
+        - $ref: '#/parameters/projectId'
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /projects/{projectId}/renameProject:
+    patch:
+      description: Gets project for given id
+      operationId: renameProject
+      parameters:
+        - in: body
+          name: renameProjectRequest
+          required: true
+          schema:
+            $ref: '#/definitions/RenameProjectRequest'
+        - $ref: '#/parameters/projectId'
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /passwordResets:
+    post:
+      description: Sends password reset email
+      operationId: sendPasswordReset
+      parameters:
+        - in: body
+          name: passwordResetRequest
+          required: true
+          schema:
+            $ref: '#/definitions/PasswordResetRequest'
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /passwordResets/{code}/validate:
+    patch:
+      description: Validate password reset request
+      operationId: validatePasswordReset
+      parameters:
+        - $ref: '#/parameters/code'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/ValidatePasswordResetResponse'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /passwordResets/{passwordResetId}/resetPassword:
+    patch:
+      description: Reset password
+      operationId: resetPassword
+      parameters:
+        - in: body
+          name: resetPasswordRequest
+          required: true
+          schema:
+            $ref: '#/definitions/ResetPasswordRequest'
+        - in: path
+          name: passwordResetId
+          type: integer
+          format: long
+          required: true
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /emailChanges:
+    post:
+      description: Sends email change email
+      operationId: sendEmailChange
+      parameters:
+        - in: body
+          name: emailChangeRequest
+          required: true
+          schema:
+            $ref: '#/definitions/EmailChangeRequest'
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /emailChanges/{code}/validate:
+    patch:
+      description: Validate email change request
+      operationId: validateEmailChange
+      parameters:
+        - $ref: '#/parameters/code'
+      responses:
+        200:
+          description: OK
+          schema:
+            type: integer
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /emailChanges/{emailChangeId}/changeEmail:
+    patch:
+      description: Change email
+      operationId: changeEmail
+      parameters:
+        - in: path
+          name: emailChangeId
+          type: integer
+          format: long
+          required: true
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /emailVerifications:
+    post:
+      description: Sends email verification email
+      operationId: sendEmailVerification
+      parameters:
+        - in: body
+          name: emailVerificationRequest
+          required: true
+          schema:
+            $ref: '#/definitions/EmailVerificationRequest'
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /emailVerifications/{code}/validate:
+    patch:
+      description: Validate email verification request
+      operationId: validateEmailVerification
+      parameters:
+        - $ref: '#/parameters/code'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/ValidateEmailVerificationResponse'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
   /testFiles:
     put:
       description: Upload test file
@@ -640,6 +820,22 @@ paths:
           description: Unexpected exception
           schema:
             $ref: '#/definitions/ApiError'
+  /browsers:
+    get:
+      description: Gets all available browsers
+      operationId: getAllBrowsers
+      responses:
+        200:
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/BrowserNameToVersions'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+
   /projects/{projectId}/builds:
     post:
       description: New build
@@ -656,6 +852,56 @@ paths:
           description: responds with NewBuildResponse
           schema:
             $ref: '#/definitions/NewBuildResponse'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /projects/{projectId}/builds/getCompletedBuildSummary:
+    get:
+      description: Get completed builds summary
+      operationId: getCompletedBuildSummary
+      parameters:
+        - in: query
+          name: start
+          required: true
+          type: string
+          format: date-time
+        - in: query
+          name: end
+          required: true
+          type: string
+          format: date-time
+        - in: query
+          name: status
+          required: false
+          type: string
+          enum: [ERROR, STOPPED, ABORTED, SUCCESS]
+        - in: query
+          name: brw
+          required: false
+          type: string
+        - in: query
+          name: brwV
+          required: false
+          type: string
+        - in: query
+          name: os
+          required: false
+          type: string
+        - in: query
+          name: after
+          required: false
+          type: integer
+        - in: query
+          name: before
+          required: false
+          type: integer
+        - $ref: '#/parameters/projectId'
+      responses:
+        200:
+          description: responds with CompletedBuildsSummaryWithPaging
+          schema:
+            $ref: '#/definitions/CompletedBuildsSummaryWithPaging'
         default:
           description: Unexpected exception
           schema:
@@ -787,17 +1033,17 @@ paths:
           description: Unexpected exception
           schema:
             $ref: '#/definitions/ApiError'
-  /builds/{buildId}/getBuildBasicDetails:
+  /builds/{buildId}/getCompletedBuildDetails:
     get:
-      description: Gets buildBasicDetails for build
-      operationId: getBuildBasicDetails
+      description: Gets completedBuildDetails for build
+      operationId: getCompletedBuildDetails
       parameters:
         - $ref: '#/parameters/buildId'
       responses:
         200:
           description: OK
           schema:
-            $ref: '#/definitions/BuildBasicDetails'
+            $ref: '#/definitions/CompletedBuildDetails'
         default:
           description: Unexpected exception
           schema:
@@ -849,6 +1095,115 @@ paths:
           description: Unexpected exception
           schema:
             $ref: '#/definitions/ApiError'
+  /builds/{buildId}/versions/{versionId}/getVersionOutputDetails:
+    get:
+      description: Get output for a version
+      operationId: getVersionOutputDetails
+      parameters:
+        - $ref: '#/parameters/buildId'
+        - $ref: '#/parameters/versionId'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/BuildOutputDetailsByVersion'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /builds/{buildId}/getBuildOutputDetails:
+    get:
+      description: Get output for a build
+      operationId: getBuildOutputDetails
+      parameters:
+        - $ref: '#/parameters/buildId'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/BuildOutputDetailsByVersion'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /builds/{buildId}/versions/{versionId}/getCapturedCode:
+    get:
+      description: Get captured code of a version
+      operationId: getCapturedCode
+      parameters:
+        - $ref: '#/parameters/buildId'
+        - $ref: '#/parameters/versionId'
+      responses:
+        200:
+          description: OK
+          schema:
+            type: string
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /users:
+    post:
+      description: New user
+      operationId: newUser
+      parameters:
+        - in: body
+          name: newUserRequest
+          required: true
+          schema:
+            $ref: '#/definitions/NewUserRequest'
+      responses:
+        200:
+          description: new User
+          schema:
+            $ref: '#/definitions/User'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /users/current:
+    get:
+      description: get currently logged-in user
+      operationId: getUser
+      responses:
+        200:
+          description: The currently logged-in user
+          schema:
+            $ref: '#/definitions/User'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /users/current/getUserPlan:
+    get:
+      description: get currently logged-in user's plan
+      operationId: getUserPlan
+      responses:
+        200:
+          description: The currently logged-in user's plan
+          schema:
+            $ref: '#/definitions/UsersPlan'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /users/current//updateUserProfile:
+    patch:
+      description: update currently logged-in user's profile
+      operationId: updateUserProfile
+      parameters:
+        - in: body
+          name: userUpdatableProfile
+          required: true
+          schema:
+            $ref: '#/definitions/UserUpdatableProfile'
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
 securityDefinitions:
   firebase:
     authorizationUrl: ""
@@ -885,7 +1240,27 @@ parameters:
     name: buildCapabilityId
     type: integer
     required: true
+  code:
+    in: path
+    name: code
+    type: string
+    required: true
 definitions:
+  TestStatus:
+    type: string
+    enum: &TestStatus [RUNNING, ERROR, STOPPED, ABORTED, SUCCESS]
+  BuildSourceType:
+    type: string
+    enum: &BuildSourceType [IDE, CI, NOT_IDE]
+  PlanType:
+    type: string
+    enum: &PlanType [FREE, PAID]
+  Role:
+    type: string
+    enum: &Role [ADMIN, DEVELOPER]
+  EmailVerificationUserType:
+    type: string
+    enum: &EmailVerificationUserType [NORMAL, IN_ORGANIZATION, BETA_INVITEE]
   LineInfo:
     type: object
     properties:
@@ -902,12 +1277,71 @@ definitions:
         $ref: '#/definitions/LineInfo'
       to:
         $ref: '#/definitions/LineInfo'
+  RenameProjectRequest:
+    type: object
+    properties:
+      name:
+        type: string
+  PasswordResetRequest:
+    type: object
+    properties:
+      email:
+        type: string
+  ResetPasswordRequest:
+    type: object
+    properties:
+      password:
+        type: string
+        format: password
+  ValidatePasswordResetResponse:
+    type: object
+    properties:
+      passwordResetId:
+        type: integer
+        format: int64
+      email:
+        type: string
+  ValidateEmailVerificationResponse:
+    type: object
+    properties:
+      emailVerificationId:
+        type: integer
+        format: int64
+      email:
+        type: string
+      emailVerificationUserType:
+        type: string
+        enum: *EmailVerificationUserType
+      organizationName:
+        type: string
+  EmailVerificationRequest:
+    type: object
+    properties:
+      email:
+        type: string
+      emailVerificationUserType:
+        type: string
+        enum: *EmailVerificationUserType
+      senderName:
+        type: string
+      organizationId:
+        type: integer
+      organizationName:
+        type: string
+      role:
+        type: string
+        enum: *Role
+  EmailChangeRequest:
+    type: object
+    properties:
+      newEmail:
+        type: string
   BuildStatusOutput:
     type: object
     properties:
       status:
         type: string
-        enum: [RUNNING, ERROR, STOPPED, ABORTED, SUCCESS]
+        enum: *TestStatus
       currentLine:
         type: integer
       output:
@@ -919,6 +1353,91 @@ definitions:
         format: int64
       error:
         $ref: '#/definitions/RunError'
+  NewUserRequest:
+    type: object
+    properties:
+      firstName:
+        type: string
+      lastName:
+        type: string
+      password:
+        type: string
+        format: password
+      timezone:
+        type: string
+      utcOffsetInMinutes:
+        type: integer
+      emailVerificationId:
+        type: integer
+      organizationName:
+        type: string
+  Organization:
+    type: object
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+  UsersPlan:
+    type: object
+    properties:
+      planType:
+        type: string
+        enum: *PlanType
+      planName:
+        type: string
+      displayName:
+        type: string
+      consumedMinutes:
+        type: integer
+      totalParallel:
+        type: integer
+      totalMinutes:
+        type: integer
+      billingCycleStart:
+        type: integer
+        format: int64
+      billingCyclePlannedEnd:
+        type: integer
+        format: int64
+  User:
+    type: object
+    properties:
+      id:
+        type: integer
+      firstName:
+        type: string
+      lastName:
+        type: string
+      email:
+        type: string
+      timezone:
+        type: string
+      role:
+        type: string
+        enum: *Role
+      organizationId:
+        type: integer
+      shotBucketSessionStorage:
+        type: string
+      emailVerificationId:
+        type: integer
+        format: int64
+      organization:
+        $ref: '#/definitions/Organization'
+      usersPlan:
+        $ref: '#/definitions/UsersPlan'
+  UserUpdatableProfile:
+    type: object
+    properties:
+      firstName:
+        type: string
+      lastName:
+        type: string
+      timezone:
+        type: string
+      organizationName:
+        type: string
   CapturedVariable:
     type: object
     properties:
@@ -926,9 +1445,88 @@ definitions:
         type: string
       value:
         type: string
-  BuildBasicDetails:
+  Paging:
     type: object
     properties:
+      hasNewer:
+        type: boolean
+      hasOlder:
+        type: boolean
+  CompletedBuildSummary:
+    type: object
+    properties:
+      buildId:
+        type: integer
+      buildName:
+        type: string
+      finalStatus:
+        type: string
+        enum: *TestStatus
+      error:
+        type: string
+      buildSourceType:
+        type: string
+        enum: *BuildSourceType
+      createDate:
+        type: integer
+        format: int64
+      testTimeMillis:
+        type: integer
+        format: int64
+      totalSuccess:
+        type: integer
+      totalError:
+        type: integer
+      totalStopped:
+        type: integer
+      totalAborted:
+        type: integer
+      os:
+        type: string
+      browserName:
+        type: string
+  CompletedBuildsSummaryWithPaging:
+    type: object
+    properties:
+      completedBuildsSummary:
+        type: array
+        items:
+          $ref: '#/definitions/CompletedBuildSummary'
+      paging:
+        $ref: '#/definitions/Paging'
+  TestVersionDetails:
+    type: object
+    properties:
+      versionId:
+        type: integer
+      versionName:
+        type: string
+      status:
+        type: string
+        enum: *TestStatus
+      timeTakenMillis:
+        type: integer
+        format: int64
+      fileName:
+        type: string
+      testName:
+        type: string
+  CompletedBuildDetails:
+    type: object
+    properties:
+      buildId:
+        type: integer
+      buildName:
+        type: string
+      finalStatus:
+        type: string
+        enum: *TestStatus
+      createDate:
+        type: integer
+        format: int64
+      testTimeMillis:
+        type: integer
+        format: int64
       os:
         type: string
       browserName:
@@ -944,14 +1542,29 @@ definitions:
       shotBucket:
         type: string
       allDoneDate:
-        type: string
-        format: date-time
+        type: integer
+        format: int64
       driverLogsAvailable:
         type: boolean
       perfLogsAvailable:
         type: boolean
       elemShotsAvailable:
         type: boolean
+      testVersionDetailsList:
+        type: array
+        items:
+          $ref: '#/definitions/TestVersionDetails'
+  BuildOutputDetailsByVersion:
+    type: object
+    properties:
+      buildId:
+        type: integer
+      versionId:
+        type: integer
+      outputsWithLineBreak:
+        type: string
+      error:
+        type: string
   ShotBasicDetails:
     type: object
     properties:
@@ -1011,7 +1624,7 @@ definitions:
         $ref: '#/definitions/RunnerPreferences'
       buildSourceType:
         type: string
-        enum: [IDE, CI, NOT_IDE]
+        enum: *BuildSourceType
       versionIds:
         type: array
         items:
