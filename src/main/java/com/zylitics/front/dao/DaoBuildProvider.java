@@ -10,6 +10,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -109,6 +110,108 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
   }
   
   @Override
+  public CompletedBuildsSummaryWithPaging getCompletedBuildsSummaryWithPaging(
+      CompletedBuildSummaryFilters filters,
+      int pageSize,
+      int projectId,
+      int userId) {
+    // - With clause doesn't fetch all the rows and limits itself based on parent's query.
+    // - start and end dates in filters are in UTC and converted to OffsetDates, db already has dates
+    // stored in utc, so when pg compares, it won't convert our dates to UTC and UTC - UTC comparison
+    // will happen.
+    String sql = "WITH per_status_count AS (\n" +
+        "SELECT bt_build_id,\n" +
+        "sum(CASE WHEN status=:success THEN 1 ELSE 0 END) AS total_success,\n" +
+        "sum(CASE WHEN status=:error THEN 1 ELSE 0 END) AS total_error,\n" +
+        "sum(CASE WHEN status=:stopped THEN 1 ELSE 0 END) AS total_stopped,\n" +
+        "sum(CASE WHEN status=:aborted THEN 1 ELSE 0 END) AS total_aborted\n" +
+        "FROM bt_build_status GROUP BY bt_build_id\n" +
+        ")\n" +
+        "SELECT bt_build_id, bu.name, bu.final_status, bu.error, bu.source_type,\n" +
+        "bu.create_date AT TIME ZONE 'UTC' AS create_date,\n" +
+        "EXTRACT(MILLISECONDS FROM (bu.end_date - bu.start_date)) AS test_time,\n" +
+        "total_success, total_error, total_stopped, total_aborted,\n" +
+        "server_os, wd_browser_name\n" +
+        "FROM bt_build bu JOIN per_status_count USING (bt_build_id)\n" +
+        "JOIN bt_build_captured_capabilities USING (bt_build_id)\n" +
+        "JOIN bt_project p USING (bt_project_id)\n" +
+        "WHERE p.zluser_id = :zluser_id AND p.bt_project_id = :bt_project_id\n" +
+        "AND bu.final_status IS NOT NULL\n" +
+        "AND bu.create_date >= :start_date AND bu.create_date <= :end_date\n";
+    SqlParamsBuilder paramsBuilder = new SqlParamsBuilder(projectId, userId);
+    paramsBuilder.withOther("success", TestStatus.SUCCESS);
+    paramsBuilder.withOther("error", TestStatus.ERROR);
+    paramsBuilder.withOther("stopped", TestStatus.STOPPED);
+    paramsBuilder.withOther("aborted", TestStatus.ABORTED);
+    paramsBuilder.withTimestampTimezone("start_date", filters.getStartDateUTC());
+    paramsBuilder.withTimestampTimezone("end_date", filters.getEndDateUTC());
+    if (filters.getFinalStatus() != null) {
+      sql += "AND bu.final_status = :final_status\n";
+      paramsBuilder.withOther("final_status", filters.getFinalStatus());
+    }
+    if (filters.getBrowserName() != null) {
+      sql += "AND wd_browser_name = :wd_browser_name\n";
+      paramsBuilder.withVarchar("wd_browser_name", filters.getBrowserName());
+    }
+    if (filters.getBrowserVersion() != null) {
+      sql += "AND wd_browser_version = :wd_browser_version\n";
+      paramsBuilder.withVarchar("wd_browser_version", filters.getBrowserVersion());
+    }
+    if (filters.getOs() != null) {
+      sql += "AND server_os = :server_os\n";
+      paramsBuilder.withVarchar("server_os", filters.getOs());
+    }
+    if (filters.getBeforeBuildId() != null) {
+      sql += "AND bu.bt_build_id < :before\n";
+      paramsBuilder.withInteger("before", filters.getBeforeBuildId());
+    }
+    if (filters.getAfterBuildId() != null) {
+      sql += "AND bu.bt_build_id > :after\n";
+      paramsBuilder.withInteger("after", filters.getAfterBuildId());
+    }
+    // we take just above page size to see whether more rows are available but return just rows =
+    // pageSize
+    sql += "ORDER BY bu.create_date DESC LIMIT :more_than_page_size";
+    paramsBuilder.withInteger("more_than_page_size", pageSize + 1);
+    List<CompletedBuildSummary> completedBuildsSummary = jdbc.query(sql, paramsBuilder.build(),
+        (rs, rowNum) ->
+            new CompletedBuildSummary()
+                .setBuildId(rs.getInt("bt_build_id"))
+                .setBuildName(rs.getString("name"))
+                .setFinalStatus(TestStatus.valueOf(rs.getString("final_status")))
+                .setError(rs.getString("error"))
+                .setBuildSourceType(BuildSourceType.valueOf(rs.getString("source_type")))
+                .setCreateDate(DateTimeUtil.utcTimeToEpochSecs(
+                    DateTimeUtil.sqlTimestampToLocal(rs.getTimestamp("create_date"))))
+                .setTestTimeMillis(rs.getLong("test_time"))
+                .setTotalSuccess(rs.getInt("total_success"))
+                .setTotalError(rs.getInt("total_error"))
+                .setTotalStopped(rs.getInt("total_stopped"))
+                .setTotalAborted(rs.getInt("total_aborted"))
+                .setOs(rs.getString("server_os"))
+                .setBrowserName(rs.getString("wd_browser_name")));
+    int size = completedBuildsSummary.size();
+    boolean moreAvailable = size > pageSize;
+    Paging paging = new Paging();
+    if (size > 0) {
+      // we asked for before and we have them this means there is at least 1 newer
+      if (filters.getBeforeBuildId() != null) {
+        paging.setHasNewer(true);
+        paging.setHasOlder(moreAvailable);
+      } else if (filters.getAfterBuildId() != null) {
+        paging.setHasOlder(true); // similarly, we must have at least 1 older
+        paging.setHasNewer(moreAvailable);
+      } else {
+        // we're showing latest record so no newer
+        paging.setHasOlder(moreAvailable);
+      }
+    }
+    return new CompletedBuildsSummaryWithPaging()
+        .setCompletedBuildsSummary(completedBuildsSummary.subList(0, Math.min(pageSize, size)))
+        .setPaging(paging);
+  }
+  
+  @Override
   public void createAndUpdateVM(BuildVM buildVM, int buildId) {
     transactionTemplate.executeWithoutResult(ts -> {
       int buildVMId = buildVMProvider.newBuildVM(buildVM);
@@ -156,28 +259,72 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
   }
   
   @Override
-  public Optional<BuildBasicDetails> getBuildBasicDetails(int buildId, int userId) {
-    String sql = "SELECT bc.name, bc.server_os, bc.wd_browser_name, bc.wd_browser_version,\n" +
+  public Optional<CompletedBuildDetails> getCompletedBuildDetails(int buildId, int userId) {
+    String sql = "SELECT b.name build_name, b.final_status,\n" +
+        "b.create_date AT TIME ZONE 'UTC' AS create_date,\n" +
+        "EXTRACT(MILLISECONDS FROM (b.end_date - b.start_date)) AS test_time,\n" +
+        "bc.name caps_name, bc.server_os, bc.wd_browser_name, bc.wd_browser_version,\n" +
         "b.server_screen_size, b.server_timezone_with_dst, b.shot_bucket_session_storage,\n" +
-        "b.all_done_date FROM bt_build AS b\n" +
+        "b.all_done_date AT TIME ZONE 'UTC' AS all_done_date FROM bt_build AS b\n" +
         "INNER JOIN bt_build_captured_capabilities AS bc ON (b.bt_build_id = bc.bt_build_id)\n" +
         "INNER JOIN bt_project AS p ON (b.bt_project_id = p.bt_project_id)\n" +
-        "WHERE b.bt_build_id = :bt_build_id AND p.zluser_id = :zluser_id";
-    List<BuildBasicDetails> buildBasicDetailsList = jdbc.query(sql,
-        new SqlParamsBuilder(userId)
-            .withInteger("bt_build_id", buildId).build(), (rs, rowNum) ->
-            new BuildBasicDetails()
-                .setBuildCapsName(rs.getString("name"))
-        .setOs(rs.getString("server_os"))
-        .setBrowserName(rs.getString("wd_browser_name"))
-        .setBrowserVersion(rs.getString("wd_browser_version"))
-        .setResolution(rs.getString("server_screen_size"))
-        .setTimezone(rs.getString("server_timezone_with_dst"))
-        .setShotBucket(rs.getString("shot_bucket_session_storage"))
-        .setAllDoneDate(DateTimeUtil.sqlTimestampToLocal(rs.getTimestamp("all_done_date"))));
-    if (buildBasicDetailsList.size() == 0) {
+        "WHERE b.bt_build_id = :bt_build_id AND p.zluser_id = :zluser_id\n" +
+        "AND b.final_status IS NOT NULL";
+    List<CompletedBuildDetails> completedBuildDetailsList = jdbc.query(sql,
+        new SqlParamsBuilder(userId).withInteger("bt_build_id", buildId).build(), (rs, rowNum) -> {
+          LocalDateTime allDoneDateLocal =
+              DateTimeUtil.sqlTimestampToLocal(rs.getTimestamp("all_done_date"));
+          Long allDoneDate = allDoneDateLocal != null
+              ? DateTimeUtil.utcTimeToEpochSecs(allDoneDateLocal)
+              : null;
+          return new CompletedBuildDetails()
+              .setBuildId(buildId)
+              .setBuildName(rs.getString("build_name"))
+              .setFinalStatus(TestStatus.valueOf(rs.getString("final_status")))
+              .setCreateDate(DateTimeUtil.utcTimeToEpochSecs(
+                  DateTimeUtil.sqlTimestampToLocal(rs.getTimestamp("create_date"))))
+              .setTestTimeMillis(rs.getLong("test_time"))
+              .setBuildCapsName(rs.getString("caps_name"))
+              .setOs(rs.getString("server_os"))
+              .setBrowserName(rs.getString("wd_browser_name"))
+              .setBrowserVersion(rs.getString("wd_browser_version"))
+              .setResolution(rs.getString("server_screen_size"))
+              .setTimezone(rs.getString("server_timezone_with_dst"))
+              .setShotBucket(rs.getString("shot_bucket_session_storage"))
+              .setAllDoneDate(allDoneDate);
+        });
+    if (completedBuildDetailsList.size() == 0) {
       return Optional.empty();
     }
-    return Optional.of(buildBasicDetailsList.get(0));
+    CompletedBuildDetails completedBuildDetails = completedBuildDetailsList.get(0);
+    // if start or end or both null, we get 0 by using coalesce
+    sql = "SELECT bt_test_version_id, bt_test_version_name, bt_file_name, bt_test_name,\n" +
+        "status, coalesce(EXTRACT(MILLISECONDS FROM (end_date - start_date)), 0) AS time_taken\n" +
+        "FROM bt_build_tests JOIN bt_build_status USING (bt_build_id, bt_test_version_id)\n" +
+        "WHERE bt_build_id = :bt_build_id and zluser_id = :zluser_id ORDER BY bt_build_tests_id";
+    List<TestVersionDetails> testVersionDetailsList = jdbc.query(sql,
+        new SqlParamsBuilder(userId).withInteger("bt_build_id", buildId).build(), (rs, rowNum) ->
+            new TestVersionDetails()
+                .setVersionId(rs.getInt("bt_test_version_id"))
+                .setVersionName(rs.getString("bt_test_version_name"))
+                .setStatus(TestStatus.valueOf(rs.getString("status")))
+                .setTimeTakenMillis(rs.getLong("time_taken"))
+                .setFileName(rs.getString("bt_file_name"))
+                .setTestName(rs.getString("bt_test_name")));
+    completedBuildDetails.setTestVersionDetailsList(testVersionDetailsList);
+    return Optional.of(completedBuildDetails);
+  }
+  
+  @Override
+  public String getCapturedCode(int buildId, int versionId, int userId) {
+    String sql = "SELECT bt_test_version_code FROM bt_build_tests\n" +
+        "JOIN bt_build USING (bt_build_id) JOIN bt_project p USING (bt_project_id)\n" +
+        "WHERE bt_build_id = :bt_build_id and bt_test_version_id = :bt_test_version_id\n" +
+        "AND p.zluser_id = :zluser_id";
+    return jdbc.query(sql,
+        new SqlParamsBuilder(userId)
+            .withInteger("bt_build_id", buildId)
+            .withInteger("bt_test_version_id", versionId).build(),
+        CommonUtil.getSingleString()).get(0);
   }
 }

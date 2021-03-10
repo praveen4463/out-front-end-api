@@ -1,5 +1,7 @@
 package com.zylitics.front.util;
 
+import com.google.common.base.Preconditions;
+
 import javax.annotation.Nullable;
 import java.sql.Timestamp;
 import java.time.*;
@@ -40,5 +42,17 @@ public class DateTimeUtil {
   
   public static String getFrondEndDisplayDate(LocalDateTime dateTime) {
     return dateTime.format(DateTimeFormatter.ofPattern("MMM dd, yyyy, h:mm:ss a"));
+  }
+  
+  public static OffsetDateTime isoLocalDateToUTCOffset(String isoLocalDate) {
+    return OffsetDateTime.of(LocalDate.parse(isoLocalDate, DateTimeFormatter.ISO_LOCAL_DATE),
+        LocalTime.of(0, 0, 0),
+        ZoneOffset.UTC);
+  }
+  
+  public static OffsetDateTime fromUTCISODateTimeString(String utcISODateTime) {
+    OffsetDateTime o = OffsetDateTime.parse(utcISODateTime, DateTimeFormatter.ISO_DATE_TIME);
+    Preconditions.checkArgument(o.getOffset() == ZoneOffset.UTC, "Given date isn't in UTC");
+    return o;
   }
 }

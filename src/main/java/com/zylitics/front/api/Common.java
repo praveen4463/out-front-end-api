@@ -23,6 +23,15 @@ public class Common {
     return builder.header("Cache-Control", "public, max-age=604800, immutable");
   }
   
+  // Used for caching responses for shorter periods. Overtime a software's way of representing things
+  // may change that will require a different type of response than it was before. Hence we will
+  // use this cache such things.
+  // Can also be used to cache things that don't change rapidly.
+  public static ResponseEntity.BodyBuilder addShortTermCacheControl(
+      ResponseEntity.BodyBuilder builder) {
+    return builder.header("Cache-Control", "private, max-age=1200"); // 20m of cache, not immutable
+  }
+  
   // !!currently not considering dst for US/UK timezones
   // UTC + 5:30 offsetMinutes will be -330 and UTC - 8:00 will be 480
   // !!! All listed buckets must exist

@@ -11,6 +11,7 @@ import com.zylitics.front.model.*;
 import com.zylitics.front.provider.*;
 import com.zylitics.front.services.RunnerService;
 import com.zylitics.front.util.CommonUtil;
+import com.zylitics.front.util.DateTimeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.constraints.Min;
 import java.nio.charset.StandardCharsets;
+import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -31,6 +33,8 @@ import java.util.Optional;
 public class BuildController extends AbstractController {
   
   private static final Logger LOG = LoggerFactory.getLogger(BuildController.class);
+  
+  private static final int COMPLETED_BUILD_SUMMARY_PAGE_SIZE = 20;
   
   private final APICoreProperties apiCoreProperties;
   
@@ -204,6 +208,52 @@ public class BuildController extends AbstractController {
     }
   }
   
+  @PostMapping("/builds/{buildId}/reRun")
+  @SuppressWarnings("unused")
+  public ResponseEntity<?> reRun(
+      @PathVariable @Min(1) int buildId,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
+  ) {
+    // rerun this build.
+    return null;
+  }
+  
+  // start and end dates must be in UTC and ISO_DATE_TIME format
+  @GetMapping("/projects/{projectId}/builds/getCompletedBuildSummary")
+  public ResponseEntity<?> getCompletedBuildSummary(
+      @PathVariable @Min(1) int projectId,
+      @RequestParam String start,
+      @RequestParam String end,
+      @RequestParam(required = false) TestStatus status,
+      @RequestParam(required = false) String brw,
+      @RequestParam(required = false) String brwV,
+      @RequestParam(required = false) String os,
+      @RequestParam(required = false) Integer after,
+      @RequestParam(required = false) Integer before,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
+  ) {
+    CompletedBuildSummaryFilters filters;
+    try {
+      filters = new CompletedBuildSummaryFilters()
+          .setStartDateUTC(DateTimeUtil.fromUTCISODateTimeString(start))
+          .setEndDateUTC(DateTimeUtil.fromUTCISODateTimeString(end))
+          .setFinalStatus(status)
+          .setBrowserName(brw)
+          .setBrowserVersion(brwV)
+          .setOs(os)
+          .setAfterBuildId(after)
+          .setBeforeBuildId(before);
+    } catch (DateTimeParseException dateTimeParseException) {
+      return sendError(HttpStatus.UNPROCESSABLE_ENTITY, "Supplied dates are in unsupported format");
+    }
+    // although builds are immutable, there could be new ones and also user may delete some thus
+    // since the same query may return different results, we can't cache results.
+    return ResponseEntity.ok(buildProvider.getCompletedBuildsSummaryWithPaging(filters,
+        COMPLETED_BUILD_SUMMARY_PAGE_SIZE,
+        projectId,
+        getUserId(userInfo)));
+  }
+  
   @SuppressWarnings("unused")
   @PatchMapping("/builds/{buildId}/stopBuild")
   public ResponseEntity<?> stopBuild(
@@ -310,7 +360,7 @@ public class BuildController extends AbstractController {
       throw new UnauthorizedException(
           "User " + userId + " doesn't have access on build " + buildId);
     }
-    return ResponseEntity.ok(buildCapabilityOptional.get());
+    return Common.addShortTermCacheControl(ResponseEntity.ok()).body(buildCapabilityOptional.get());
   }
   
   // send back a list of variables rather than Map so that it's easier on client to sort the array
@@ -319,7 +369,8 @@ public class BuildController extends AbstractController {
       @PathVariable @Min(1) int buildId,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
   ) {
-    return ResponseEntity.ok(buildVarProvider.getCapturedBuildVars(buildId, getUserId(userInfo)));
+    return Common.addShortTermCacheControl(ResponseEntity.ok())
+        .body(buildVarProvider.getCapturedBuildVars(buildId, getUserId(userInfo)));
   }
   
   // send back a list of variables rather than Map so that it's easier on client to sort the array
@@ -328,7 +379,8 @@ public class BuildController extends AbstractController {
       @PathVariable @Min(1) int buildId,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
   ) {
-    return ResponseEntity.ok(globalVarProvider.getCapturedGlobalVars(buildId, getUserId(userInfo)));
+    return Common.addShortTermCacheControl(ResponseEntity.ok())
+        .body(globalVarProvider.getCapturedGlobalVars(buildId, getUserId(userInfo)));
   }
   
   @GetMapping("/builds/{buildId}/getRunnerPreferences")
@@ -343,26 +395,25 @@ public class BuildController extends AbstractController {
       throw new UnauthorizedException(
           "User " + userId + " doesn't have access on build " + buildId);
     }
-    return ResponseEntity.ok(runnerPreferencesOptional.get());
+    return Common.addShortTermCacheControl(ResponseEntity.ok()).body(runnerPreferencesOptional.get());
   }
   
-  @GetMapping("/builds/{buildId}/getBuildBasicDetails")
-  public ResponseEntity<BuildBasicDetails> getBuildBasicDetails(
+  @GetMapping("/builds/{buildId}/getCompletedBuildDetails")
+  public ResponseEntity<CompletedBuildDetails> getCompletedBuildDetails(
       @PathVariable @Min(1) int buildId,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
   ) {
     int userId = getUserId(userInfo);
-    Optional<BuildBasicDetails> buildBasicDetailsOptional =
-        buildProvider.getBuildBasicDetails(buildId, userId);
-    if (!buildBasicDetailsOptional.isPresent()) {
-      throw new UnauthorizedException(
-          "User " + userId + " doesn't have access on build " + buildId);
+    Optional<CompletedBuildDetails> completedBuildDetailsOptional =
+        buildProvider.getCompletedBuildDetails(buildId, userId);
+    if (!completedBuildDetailsOptional.isPresent()) {
+      return ResponseEntity.ok().build(); // let caller handle this case
     }
-    BuildBasicDetails buildBasicDetails = buildBasicDetailsOptional.get();
+    CompletedBuildDetails completedBuildDetails = completedBuildDetailsOptional.get();
     // if runner has not completed processing the build, don't check other things that may be in
     // progress.
-    if (buildBasicDetails.getAllDoneDate() == null) {
-      return ResponseEntity.ok(buildBasicDetails);
+    if (completedBuildDetails.getAllDoneDate() == null) {
+      return ResponseEntity.ok(completedBuildDetails);
     }
     // add remaining things into details from cloud
     String buildDir = Common.getBuildDirName(buildId);
@@ -373,13 +424,13 @@ public class BuildController extends AbstractController {
     if (elementShotIterator.hasNext()) {
       Blob blob = elementShotIterator.next();
       if (blob.getName().endsWith(".png")) {
-        buildBasicDetails.setElemShotsAvailable(true);
+        completedBuildDetails.setElemShotsAvailable(true);
       }
     }
-    buildBasicDetails.setDriverLogsAvailable(driverLogsBlob != null);
-    buildBasicDetails.setPerfLogsAvailable(perfLogsBlob != null);
-    // since a build is immutable and it's done, we want browser to cache the response.
-    return Common.addCacheControlPublic(ResponseEntity.ok()).body(buildBasicDetails);
+    completedBuildDetails.setDriverLogsAvailable(driverLogsBlob != null);
+    completedBuildDetails.setPerfLogsAvailable(perfLogsBlob != null);
+    // since a build is immutable and it's all fully done, we want browser to cache the response.
+    return Common.addShortTermCacheControl(ResponseEntity.ok()).body(completedBuildDetails);
   }
   
   @GetMapping("/builds/{buildId}/getDriverLogs")
@@ -413,8 +464,7 @@ public class BuildController extends AbstractController {
       return ResponseEntity.ok().build();
     }
     byte[] file = new FileDownload().download(blob);
-    // send a cached response as these files are immutable
-    return Common.addCacheControlPublic(ResponseEntity.ok())
+    return Common.addShortTermCacheControl(ResponseEntity.ok())
         .body(new String(file, StandardCharsets.UTF_8));
   }
   
@@ -438,7 +488,42 @@ public class BuildController extends AbstractController {
       return ResponseEntity.ok().build();
     }
     // send a cached response as shot list is immutable
-    return Common.addCacheControlPublic(ResponseEntity.ok()).body(shots);
+    return Common.addShortTermCacheControl(ResponseEntity.ok()).body(shots);
+  }
+  
+  // for now don't cache any result as this endpoint could be used from places that might be polling
+  // for output such as 'running builds' and try to cache at client per needs.
+  @GetMapping("/builds/{buildId}/versions/{versionId}/getVersionOutputDetails")
+  public ResponseEntity<BuildOutputDetailsByVersion> getVersionOutputDetails(
+      @PathVariable @Min(1) int buildId,
+      @PathVariable @Min(1) int versionId,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
+  ) {
+    Optional<BuildOutputDetailsByVersion> output =
+        buildOutputProvider.getVersionOutputDetails(buildId, versionId, getUserId(userInfo));
+    return output.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.ok().build());
+  }
+  
+  // for now don't cache any result as this endpoint could be used from places that might be polling
+  // for output such as 'running builds' and try to cache at client per needs.
+  @GetMapping("/builds/{buildId}/getBuildOutputDetails")
+  public ResponseEntity<List<BuildOutputDetailsByVersion>> getBuildOutputDetails(
+      @PathVariable @Min(1) int buildId,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
+  ) {
+    List<BuildOutputDetailsByVersion> outputs =
+        buildOutputProvider.getBuildOutputDetails(buildId, getUserId(userInfo));
+    return ResponseEntity.ok(outputs);
+  }
+  
+  @GetMapping("/builds/{buildId}/versions/{versionId}/getCapturedCode")
+  public ResponseEntity<String> getCapturedCode(
+      @PathVariable @Min(1) int buildId,
+      @PathVariable @Min(1) int versionId,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
+  ) {
+    return Common.addShortTermCacheControl(ResponseEntity.ok())
+        .body(buildProvider.getCapturedCode(buildId, versionId, getUserId(userInfo)));
   }
   
   private Blob getDriverLogsBlob(APICoreProperties.Storage storageProps, String buildDir) {
