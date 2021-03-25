@@ -4,8 +4,8 @@ import com.google.api.gax.paging.Page;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.Storage;
-import com.google.common.base.Preconditions;
 import com.zylitics.front.config.APICoreProperties;
+import com.zylitics.front.exception.HttpRequestException;
 import com.zylitics.front.exception.UnauthorizedException;
 import com.zylitics.front.model.*;
 import com.zylitics.front.provider.*;
@@ -23,14 +23,17 @@ import javax.validation.constraints.Min;
 import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @RestController
 @RequestMapping("${app-short-version}")
 public class BuildController extends AbstractController {
+  
+  private static final String NEW_SESSION_ERROR = "An internal server error occurred" +
+      " while creating new session. We've been notified and this should be fixed very soon";
+  
+  private static final String VM_NOT_CREATED_ERROR = "Couldn't create a VM for this build." +
+      " Please try in a few minutes or contact us if problem persists";
   
   private static final Logger LOG = LoggerFactory.getLogger(BuildController.class);
   
@@ -119,6 +122,154 @@ public class BuildController extends AbstractController {
   delete/update.
   This way, a build request record will denote a parallel quota occupation.
    */
+  @PostMapping("/projects/{projectId}/builds/newBuildWithoutSession")
+  @SuppressWarnings("unused")
+  public ResponseEntity<?> newBuildWithoutSession(
+      @Validated @RequestBody BuildRunConfig buildRunConfig,
+      @PathVariable @Min(1) int projectId,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo) {
+    int userId = getUserId(userInfo);
+    User user = userProvider.getUser(userId)
+        .orElseThrow(() -> new UnauthorizedException("User not found"));
+    long buildRequestId = getNewBuildRequest(buildRunConfig.getBuildSourceType(), userId);
+    try {
+      return ResponseEntity.ok(createNewBuild(
+          buildRequestId,
+          buildRunConfig,
+          projectId,
+          user));
+    } catch (HttpRequestException httpRequestException) {
+      return sendError(httpRequestException.getStatus(), httpRequestException.getMessage());
+    }
+  }
+  
+  private long getNewBuildRequest(BuildSourceType sourceType, int userId) {
+    return buildRequestProvider.newBuildRequest(new BuildRequest()
+        .setBuildSourceType(sourceType).setUserId(userId));
+  }
+  
+  private void validateNewBuildRequestQuota(User user, BuildSourceType buildSourceType) {
+    UsersPlan usersPlan = user.getUsersPlan();
+    Objects.requireNonNull(usersPlan);
+    List<BuildRequest> buildRequests = buildRequestProvider.getCurrentBuildRequests(user.getId());
+    int totalBuildRequests = buildRequests.size();
+  
+    if (totalBuildRequests > usersPlan.getTotalParallel()) {
+      throw new HttpRequestException(HttpStatus.TOO_MANY_REQUESTS,
+          "Total parallel builds limit reached." +
+              " If you're starting several builds together, please slow down and wait for few" +
+              " moments in between build runs");
+    }
+    if (buildSourceType == BuildSourceType.IDE) {
+      if (buildRequests.stream()
+          .filter(br -> br.getBuildSourceType() == BuildSourceType.IDE).count() > 1) {
+        throw new HttpRequestException(HttpStatus.TOO_MANY_REQUESTS,
+            "You can start/run just one build from" +
+                " IDE at a time. If a build is currently running, wait until all tests have" +
+                " been processed");
+      }
+    }
+    if (usersPlan.getPlanType() == PlanType.FREE &&
+        usersPlan.getTotalMinutes() - usersPlan.getConsumedMinutes() < 1) {
+      throw new HttpRequestException(HttpStatus.FORBIDDEN,
+          "You've exhausted plan's minutes quota" +
+              ", please upgrade or contact us for additional testing minutes");
+    }
+  }
+  
+  // !! make sure we mark build request completed whenever there is an error
+  private int createNewBuild(long buildRequestId,
+                             BuildRunConfig buildRunConfig,
+                             int projectId,
+                             User user) {
+    try {
+      validateNewBuildRequestQuota(user, buildRunConfig.getBuildSourceType());
+      // parallel, minutes quota verified, let's verify code and jump on create build.
+      if (testVersionProvider.anyVersionHasBlankCode(buildRunConfig.getVersionIds(),
+          user.getId())) {
+        throw new IllegalArgumentException("All tests in a build must contain non empty code");
+      }
+      return buildProvider.newBuild(buildRunConfig, buildRequestId, user, projectId);
+    } catch (Throwable t) {
+      markBuildRequestCompleted(buildRequestId);
+      throw t;
+    }
+  }
+  
+  @PostMapping("/builds/{buildId}/newSession")
+  @SuppressWarnings("unused")
+  public ResponseEntity<?> newSession(
+      @PathVariable @Min(1) int buildId,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo) {
+    int userId = getUserId(userInfo);
+    try {
+      return ResponseEntity.ok(createNewSession(buildId, userId));
+    } catch (HttpRequestException httpRequestException) {
+      return sendError(httpRequestException.getStatus(), httpRequestException.getMessage());
+    }
+  }
+  
+  // !! make sure we mark build request completed whenever there is an error
+  private NewSessionResponse createNewSession(int buildId, int userId) {
+    // TODO: if for any reason we couldn't get build, this must be db issue and we can't mark build
+    //  request completed, so keep a watch on such failures as we will need to mark those requests
+    //  manually then.
+    SessionFailureReason sessionFailureReason = null;
+    Build build = buildProvider.getBuild(buildId, userId)
+        .orElseThrow(() -> new IllegalArgumentException("Invalid buildId given"));
+    long buildRequestId = build.getBuildRequestId();
+    try {
+      buildProvider.updateSessionRequestStart(buildId);
+      BuildCapability buildCapability = buildCapabilityProvider
+          .getCapturedCapability(buildId, userId)
+          .orElseThrow(RuntimeException::new);
+      // send a request to create/find a VM
+      BuildVM buildVM;
+      try {
+        buildVM = vmService.newBuildVM(new NewBuildVM()
+            .setDisplayResolution(build.getServerScreenSize())
+            .setTimezone(build.getServerTimezone())
+            .setBrowserName(buildCapability.getWdBrowserName())
+            .setBrowserVersion(buildCapability.getWdBrowserVersion())
+            .setOs(buildCapability.getServerOs()));
+        // set deleteFromRunner
+        buildVM.setDeleteFromRunner(build.getSourceType() != BuildSourceType.IDE);
+      } catch (Throwable t) {
+        LOG.error("Couldn't create buildVM", t);
+        sessionFailureReason = SessionFailureReason.VM_NOT_CREATED;
+        throw new HttpRequestException(HttpStatus.INTERNAL_SERVER_ERROR, VM_NOT_CREATED_ERROR);
+      }
+      // save buildVM details to vm table
+      buildProvider.createAndUpdateVM(buildVM, buildId);
+      // start new session as we've a VM
+      String sessionId;
+      try {
+        sessionId =
+            runnerService.newSession(buildVM.getInternalIp(), buildId);
+      } catch (Throwable t) {
+        LOG.error("Couldn't start a new session", t);
+        sessionFailureReason = SessionFailureReason.NEW_SESSION_ERROR;
+        throw new HttpRequestException(HttpStatus.INTERNAL_SERVER_ERROR, NEW_SESSION_ERROR);
+      }
+      // updates session_request_end_date
+      buildProvider.updateSession(sessionId, buildId);
+      return new NewSessionResponse()
+          .setBuildIdentifier(
+              new BuildIdentifier().setBuildId(buildId).setBuildKey(build.getBuildKey()))
+          .setSessionId(sessionId);
+    } catch (Throwable t) {
+      markBuildRequestCompleted(buildRequestId);
+      // updates session_request_end_date
+      buildProvider.updateOnSessionFailure(
+          sessionFailureReason != null ? sessionFailureReason : SessionFailureReason.EXCEPTION,
+          sessionFailureReason == SessionFailureReason.VM_NOT_CREATED
+              ? VM_NOT_CREATED_ERROR
+              : NEW_SESSION_ERROR,
+          buildId);
+      throw t;
+    }
+  }
+  
   @PostMapping("/projects/{projectId}/builds")
   @SuppressWarnings("unused")
   public ResponseEntity<?> newBuild(
@@ -127,95 +278,47 @@ public class BuildController extends AbstractController {
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
   ) {
     int userId = getUserId(userInfo);
-    BuildSourceType sourceType = buildRunConfig.getBuildSourceType();
-    long buildRequestId = buildRequestProvider.newBuildRequest(new BuildRequest()
-        .setBuildSourceType(sourceType).setUserId(userId));
+    User user = userProvider.getUser(userId)
+        .orElseThrow(() -> new UnauthorizedException("User not found"));
+    long buildRequestId = getNewBuildRequest(buildRunConfig.getBuildSourceType(), userId);
     try {
-      User user = userProvider.getUser(userId)
-          .orElseThrow(() -> new UnauthorizedException("User not found"));
-      UsersPlan usersPlan = user.getUsersPlan();
-      Preconditions.checkArgument(usersPlan != null);
-      List<BuildRequest> buildRequests = buildRequestProvider.getCurrentBuildRequests(userId);
-      int totalBuildRequests = buildRequests.size();
-  
-      if (totalBuildRequests > usersPlan.getTotalParallel()) {
-        markBuildRequestCompleted(buildRequestId);
-        return sendError(HttpStatus.TOO_MANY_REQUESTS, "Total parallel builds limit reached." +
-            " If you're starting several builds together, please slow down and wait for few" +
-            " moments in between build runs");
-      }
-      if (sourceType == BuildSourceType.IDE) {
-        if (buildRequests.stream()
-            .filter(br -> br.getBuildSourceType() == BuildSourceType.IDE).count() > 1) {
-          markBuildRequestCompleted(buildRequestId);
-          return sendError(HttpStatus.TOO_MANY_REQUESTS, "You can start/run just one build from" +
-              " IDE at a time. If a build is currently running, wait until all tests have" +
-              " been processed");
-        }
-      }
-      if (usersPlan.getPlanType() == PlanType.FREE &&
-          usersPlan.getTotalMinutes() - usersPlan.getConsumedMinutes() < 1) {
-        markBuildRequestCompleted(buildRequestId);
-        return sendError(HttpStatus.FORBIDDEN, "You've exhausted plan's minutes quota" +
-            ", please upgrade or contact us for additional testing minutes");
-      }
-      // parallel, minutes quota verified, let's verify code and jump on create build.
-      if (testVersionProvider.anyVersionHasBlankCode(buildRunConfig.getVersionIds(), userId)) {
-        markBuildRequestCompleted(buildRequestId);
-        throw new IllegalArgumentException("All tests in a build must contain non empty code");
-      }
-      BuildIdentifier buildIdentifier =
-          buildProvider.newBuild(buildRunConfig, buildRequestId, user, projectId);
-      // send a request to create/find a VM
-      BuildCapability buildCapability = buildCapabilityProvider
-          .getBuildCapability(buildRunConfig.getBuildCapabilityId(), userId)
-          .orElseThrow(RuntimeException::new);
-      BuildVM buildVM;
-      try {
-        buildVM = vmService.newBuildVM(new NewBuildVM()
-            .setDisplayResolution(buildRunConfig.getDisplayResolution())
-            .setTimezone(buildRunConfig.getTimezone())
-            .setBrowserName(buildCapability.getWdBrowserName())
-            .setBrowserVersion(buildCapability.getWdBrowserVersion())
-            .setOs(buildCapability.getServerOs()));
-        // set deleteFromRunner
-        buildVM.setDeleteFromRunner(sourceType != BuildSourceType.IDE);
-      } catch (Throwable t) {
-        LOG.error("Couldn't create buildVM", t);
-        markBuildRequestCompleted(buildRequestId);
-        return sendError(HttpStatus.INTERNAL_SERVER_ERROR, "Couldn't create a VM for this build." +
-            " Please try in a few minutes or contact us if problem persists");
-      }
-      // save buildVM details to vm table
-      buildProvider.createAndUpdateVM(buildVM, buildIdentifier.getBuildId());
-      // start new session as we've a VM
-      String sessionId;
-      try {
-        sessionId =
-            runnerService.newSession(buildVM.getInternalIp(), buildIdentifier.getBuildId());
-      } catch (Throwable t) {
-        LOG.error("Couldn't start a new session", t);
-        markBuildRequestCompleted(buildRequestId);
-        return sendError(HttpStatus.INTERNAL_SERVER_ERROR, "An internal server error occurred" +
-            " while creating new session. We've been notified and this should be fixed very soon");
-      }
-      buildProvider.updateSession(sessionId, buildIdentifier.getBuildId());
-      return ResponseEntity.ok(new NewBuildResponse().setBuildIdentifier(buildIdentifier)
-          .setSessionId(sessionId));
-    } catch (Throwable t) {
-      buildRequestProvider.markBuildRequestCompleted(buildRequestId);
-      throw t;
+      int buildId = createNewBuild(buildRequestId, buildRunConfig, projectId, user);
+      return ResponseEntity.ok(createNewSession(buildId, userId));
+    } catch (HttpRequestException httpRequestException) {
+      return sendError(httpRequestException.getStatus(), httpRequestException.getMessage());
     }
   }
   
   @PostMapping("/builds/{buildId}/reRun")
   @SuppressWarnings("unused")
   public ResponseEntity<?> reRun(
+      @Validated @RequestBody BuildReRunConfig buildReRunConfig,
       @PathVariable @Min(1) int buildId,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
   ) {
     // rerun this build.
-    return null;
+    int userId = getUserId(userInfo);
+    User user = userProvider.getUser(userId)
+        .orElseThrow(() -> new UnauthorizedException("User not found"));
+    Build build = buildProvider.getBuild(buildId, userId)
+        .orElseThrow(() -> new IllegalArgumentException("Invalid buildId given"));
+    long buildRequestId = getNewBuildRequest(build.getSourceType(), userId);
+    try {
+      try {
+        validateNewBuildRequestQuota(user, build.getSourceType());
+      } catch (HttpRequestException httpRequestException) {
+        markBuildRequestCompleted(buildRequestId);
+        return sendError(httpRequestException.getStatus(), httpRequestException.getMessage());
+      }
+      return ResponseEntity.ok(buildProvider.duplicateBuild(
+          buildReRunConfig,
+          buildId,
+          buildRequestId,
+          user));
+    } catch (Throwable t) {
+      markBuildRequestCompleted(buildRequestId);
+      throw t;
+    }
   }
   
   // start and end dates must be in UTC and ISO_DATE_TIME format
@@ -524,6 +627,23 @@ public class BuildController extends AbstractController {
   ) {
     return Common.addShortTermCacheControl(ResponseEntity.ok())
         .body(buildProvider.getCapturedCode(buildId, versionId, getUserId(userInfo)));
+  }
+  
+  @GetMapping("/projects/{projectId}/builds/getRunningBuilds")
+  public ResponseEntity<List<RunningBuild>> getRunningBuilds(
+      @PathVariable @Min(1) int projectId,
+      @RequestParam(required = false) Integer after,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
+  ) {
+    return ResponseEntity.ok(buildProvider.getRunningBuilds(after, projectId, getUserId(userInfo)));
+  }
+  
+  @GetMapping("/builds/{buildId}/getRunningBuildSummary")
+  public ResponseEntity<RunningBuildSummary> getRunningBuildSummary(
+      @PathVariable @Min(1) int buildId,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
+  ) {
+    return ResponseEntity.ok(buildProvider.getRunningBuildSummary(buildId, getUserId(userInfo)));
   }
   
   private Blob getDriverLogsBlob(APICoreProperties.Storage storageProps, String buildDir) {

@@ -11,7 +11,10 @@ public interface FileProvider {
   
   List<FileIdentifier> getFilesIdentifier(int projectId, int userId);
   
-  List<File> getFilesWithTests(List<Integer> fileIdsFilter, int useId);
+  List<File> getFilesWithTests(List<Integer> fileIdsFilter,
+                               boolean excludeCode,
+                               boolean excludeNoCodeTests,
+                               int useId);
   
   void renameFile(File file, int projectId, int userId);
   

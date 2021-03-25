@@ -12,6 +12,8 @@ public interface BuildCapabilityProvider {
   
   void captureCapability(int buildCapabilityId, int buildId);
   
+  void duplicateCapturedCapability(int duplicateBuildId, int originalBuildId);
+  
   void updateCapability(BuildCapability buildCapability, int userId);
   
   List<BuildCapabilityIdentifier> getBuildCapabilitiesIdentifier(int userId);

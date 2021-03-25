@@ -1,5 +1,6 @@
 package com.zylitics.front.dao;
 
+import com.zylitics.front.exception.UnauthorizedException;
 import com.zylitics.front.model.*;
 import com.zylitics.front.provider.*;
 import com.zylitics.front.util.CommonUtil;
@@ -10,12 +11,24 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
+import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Repository
 public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvider {
+  
+  private static final String BUILD_INSERT_STM =
+      "INSERT INTO bt_build\n" +
+      "(build_key, name, server_screen_size, server_timezone_with_dst,\n" +
+      "shot_bucket_session_storage, abort_on_failure, aet_keep_single_window,\n" +
+      "aet_update_url_blank, aet_reset_timeouts, aet_delete_all_cookies, bt_project_id,\n" +
+      "source_type, bt_build_request_id, create_date)\n";
   
   private final TransactionTemplate transactionTemplate;
   
@@ -55,34 +68,36 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
   }
   
   @Override
-  public BuildIdentifier newBuild(BuildRunConfig config,
-                                  long buildRequestId,
-                                  User user,
-                                  int projectId) {
+  public int newBuild(BuildRunConfig config,
+                      long buildRequestId,
+                      User user,
+                      int projectId) {
     common.verifyUsersProject(projectId, user.getId());
-    return transactionTemplate.execute(ts -> newBuildInTransaction(config, buildRequestId, user,
-        projectId));
+    Integer newBuildId = transactionTemplate.execute(ts -> newBuildInTransaction(
+        config, buildRequestId, user, projectId));
+    Objects.requireNonNull(newBuildId);
+    return newBuildId;
   }
   
-  private BuildIdentifier newBuildInTransaction(BuildRunConfig config,
-                                                long buildRequestId,
-                                                User user,
-                                                int projectId) {
-    String sql = "INSERT INTO bt_build\n" +
-        "(build_key, server_screen_size, server_timezone_with_dst,\n" +
-        "shot_bucket_session_storage, abort_on_failure, aet_keep_single_window,\n" +
-        "aet_update_url_blank, aet_reset_timeouts, aet_delete_all_cookies, bt_project_id,\n" +
-        "source_type, bt_build_request_id, create_date)\n" +
-        "VALUES (:build_key, :server_screen_size, :server_timezone_with_dst,\n" +
+  private String getBuildKey() {
+    // TODO: currently I'm generating and putting a random without checking for existence, it may
+    //  fail when duplicate. Keep and eye and fix later.
+    return randoms.generateRandom(10);
+  }
+  
+  private int newBuildInTransaction(BuildRunConfig config,
+                                    long buildRequestId,
+                                    User user,
+                                    int projectId) {
+    String sql = BUILD_INSERT_STM +
+        "VALUES (:build_key, :name, :server_screen_size, :server_timezone_with_dst,\n" +
         ":shot_bucket_session_storage, :abort_on_failure, :aet_keep_single_window,\n" +
         ":aet_update_url_blank, :aet_reset_timeouts, :aet_delete_all_cookies, :bt_project_id,\n" +
         ":source_type, :bt_build_request_id, :create_date) RETURNING bt_build_id";
     RunnerPreferences runnerPreferences = config.getRunnerPreferences();
-    // TODO: currently I'm generating and putting a random without checking for existence, it may
-    //  fail when duplicate. Keep and eye and fix later.
-    String buildKey = randoms.generateRandom(10);
     int buildId = jdbc.query(sql, new SqlParamsBuilder()
-        .withVarchar("build_key", buildKey)
+        .withVarchar("build_key", getBuildKey())
+        .withOther("name", config.getBuildName())
         .withVarchar("server_screen_size", config.getDisplayResolution())
         .withOther("server_timezone_with_dst", config.getTimezone())
         .withVarchar("shot_bucket_session_storage", user.getShotBucketSessionStorage())
@@ -106,7 +121,108 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
     
     globalVarProvider.captureGlobalVars(projectId, buildId);
     
-    return new BuildIdentifier().setBuildId(buildId).setBuildKey(buildKey);
+    return buildId;
+  }
+  
+  @Override
+  public int duplicateBuild(BuildReRunConfig buildReRunConfig,
+                            int buildId,
+                            long buildRequestId,
+                            User user) {
+    common.verifyUsersBuild(buildId, user.getId());
+    Integer duplicatedBuildId = transactionTemplate
+        .execute(ts -> duplicateBuildInTransaction(buildReRunConfig,buildId, buildRequestId, user));
+    Objects.requireNonNull(duplicatedBuildId);
+    return duplicatedBuildId;
+  }
+  
+  private int duplicateBuildInTransaction(BuildReRunConfig buildReRunConfig,
+                                          int buildId,
+                                          long buildRequestId,
+                                          User user) {
+    // while putting duplicate build, session bucket is taken from what is currently set for user
+    // rather than from old build as user may have changed location changing their default bucket.
+    String sql = BUILD_INSERT_STM +
+        "SELECT :build_key, name, server_screen_size, server_timezone_with_dst,\n" +
+        ":shot_bucket_session_storage, abort_on_failure, aet_keep_single_window,\n" +
+        "aet_update_url_blank, aet_reset_timeouts, aet_delete_all_cookies, bt_project_id,\n" +
+        ":source_type, :bt_build_request_id, :create_date\n" +
+        "FROM bt_build WHERE bt_build_id = :bt_build_id \n" +
+        "RETURNING bt_build_id";
+    int duplicatedBuildId = jdbc.query(sql, new SqlParamsBuilder()
+        .withInteger("bt_build_id", buildId)
+        .withVarchar("build_key", getBuildKey())
+        .withVarchar("shot_bucket_session_storage", user.getShotBucketSessionStorage())
+        .withBigint("bt_build_request_id", buildRequestId)
+        .withOther("source_type", buildReRunConfig.getBuildSourceType())
+        .withCreateDate().build(), CommonUtil.getSingleInt()).get(0);
+    
+    buildCapabilityProvider.duplicateCapturedCapability(duplicatedBuildId, buildId);
+    
+    testVersionProvider.duplicateCapturedVersions(duplicatedBuildId, buildId);
+    
+    buildVarProvider.duplicateBuildVars(duplicatedBuildId, buildId);
+    
+    globalVarProvider.duplicateGlobalVars(duplicatedBuildId, buildId);
+    
+    return duplicatedBuildId;
+  }
+  
+  @Override
+  public Optional<Build> getBuild(int buildId, int userId) {
+    String sql = "SELECT build_key, bu.name, bt_build_vm_id, server_screen_size,\n" +
+        "server_timezone_with_dst, session_key,\n" +
+        "session_request_start_date AT TIME ZONE 'UTC' AS session_request_start_date,\n" +
+        "session_request_end_date AT TIME ZONE 'UTC' AS session_request_end_date,\n" +
+        "session_failure_reason,\n" +
+        "start_date AT TIME ZONE 'UTC' AS start_date,\n" +
+        "end_date AT TIME ZONE 'UTC' AS end_date,\n" +
+        "all_done_date AT TIME ZONE 'UTC' AS all_done_date,\n" +
+        "final_status, error, shot_bucket_session_storage, abort_on_failure,\n" +
+        "aet_keep_single_window, aet_update_url_blank, aet_reset_timeouts,\n" +
+        "aet_delete_all_cookies, bt_project_id, source_type, bt_build_request_id,\n" +
+        "bu.create_date AT TIME ZONE 'UTC' AS create_date\n" +
+        "FROM bt_build bu JOIN bt_project USING (bt_project_id)\n" +
+        "WHERE bt_build_id = :bt_build_id AND zluser_id = :zluser_id";
+    List<Build> builds = jdbc.query(sql, new SqlParamsBuilder(userId)
+        .withInteger("bt_build_id", buildId).build(), (rs, rowNum) ->
+            new Build()
+                .setBuildId(buildId)
+                .setBuildKey(rs.getString("build_key"))
+                .setName(rs.getString("name"))
+                .setBuildVMId(CommonUtil.getIntegerSqlVal(rs, "bt_build_vm_id"))
+                .setServerScreenSize(rs.getString("server_screen_size"))
+                .setServerTimezone(rs.getString("server_timezone_with_dst"))
+                .setSessionKey(rs.getString("session_key"))
+                .setSessionRequestStartDate(
+                    CommonUtil.getEpochSecsOrNullFromSqlTimestamp(rs, "session_request_start_date"))
+                .setSessionRequestEndDate(
+                    CommonUtil.getEpochSecsOrNullFromSqlTimestamp(rs, "session_request_end_date"))
+                .setSessionFailureReason(CommonUtil.convertEnumFromSqlVal(rs,
+                    "session_failure_reason", SessionFailureReason.class))
+                .setStartDate(
+                    CommonUtil.getEpochSecsOrNullFromSqlTimestamp(rs, "start_date"))
+                .setEndDate(
+                    CommonUtil.getEpochSecsOrNullFromSqlTimestamp(rs, "end_date"))
+                .setAllDoneDate(
+                    CommonUtil.getEpochSecsOrNullFromSqlTimestamp(rs, "all_done_date"))
+                .setFinalStatus(CommonUtil.convertEnumFromSqlVal(rs,
+                    "final_status", TestStatus.class))
+                .setError(rs.getString("error"))
+                .setShotBucketSessionStorage(rs.getString("shot_bucket_session_storage"))
+                .setAbortOnFailure(rs.getBoolean("abort_on_failure"))
+                .setAetKeepSingleWindow(rs.getBoolean("aet_keep_single_window"))
+                .setAetUpdateUrlBlank(rs.getBoolean("aet_update_url_blank"))
+                .setAetResetTimeouts(rs.getBoolean("aet_reset_timeouts"))
+                .setAetDeleteAllCookies(rs.getBoolean("aet_delete_all_cookies"))
+                .setProjectId(rs.getInt("bt_project_id"))
+                .setSourceType(BuildSourceType.valueOf(rs.getString("source_type")))
+                .setBuildRequestId(rs.getLong("bt_build_request_id"))
+                .setCreateDate(CommonUtil.getEpochSecsFromSqlTimestamp(rs, "create_date")));
+    if (builds.size() == 0) {
+      return Optional.empty();
+    }
+    return Optional.of(builds.get(0));
   }
   
   @Override
@@ -129,7 +245,7 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
         ")\n" +
         "SELECT bt_build_id, bu.name, bu.final_status, bu.error, bu.source_type,\n" +
         "bu.create_date AT TIME ZONE 'UTC' AS create_date,\n" +
-        "EXTRACT(MILLISECONDS FROM (bu.end_date - bu.start_date)) AS test_time,\n" +
+        "EXTRACT(EPOCH FROM bu.end_date) - EXTRACT(EPOCH FROM bu.start_date) test_time_sec,\n" +
         "total_success, total_error, total_stopped, total_aborted,\n" +
         "server_os, wd_browser_name\n" +
         "FROM bt_build bu JOIN per_status_count USING (bt_build_id)\n" +
@@ -183,7 +299,7 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
                 .setBuildSourceType(BuildSourceType.valueOf(rs.getString("source_type")))
                 .setCreateDate(
                     DateTimeUtil.sqlUTCTimestampToEpochSecs(rs.getTimestamp("create_date")))
-                .setTestTimeMillis(rs.getLong("test_time"))
+                .setTestTimeMillis(rs.getLong("test_time_sec") * 1000)
                 .setTotalSuccess(rs.getInt("total_success"))
                 .setTotalError(rs.getInt("total_error"))
                 .setTotalStopped(rs.getInt("total_stopped"))
@@ -224,11 +340,36 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
   }
   
   @Override
+  public void updateSessionRequestStart(int buildId) {
+    String sql = "UPDATE bt_build SET session_request_start_date = :session_request_start_date\n" +
+        "WHERE bt_build_id = :bt_build_id";
+    CommonUtil.validateSingleRowDbCommit(jdbc.update(sql, new SqlParamsBuilder()
+        .withTimestampTimezone("session_request_start_date", DateTimeUtil.getCurrentUTC())
+        .withInteger("bt_build_id", buildId).build()));
+  }
+  
+  @Override
   public void updateSession(String sessionId, int buildId) {
-    String sql = "UPDATE bt_build SET session_key = :session_key\n" +
+    String sql = "UPDATE bt_build SET session_key = :session_key,\n" +
+        "session_request_end_date = :session_request_end_date\n" +
         "WHERE bt_build_id = :bt_build_id";
     CommonUtil.validateSingleRowDbCommit(jdbc.update(sql, new SqlParamsBuilder()
         .withVarchar("session_key", sessionId)
+        .withTimestampTimezone("session_request_end_date", DateTimeUtil.getCurrentUTC())
+        .withInteger("bt_build_id", buildId).build()));
+  }
+  
+  @Override
+  public void updateOnSessionFailure(SessionFailureReason sessionFailureReason,
+                                           String error,
+                                           int buildId) {
+    String sql = "UPDATE bt_build SET session_failure_reason = :session_failure_reason,\n" +
+        "error = :error, session_request_end_date = :session_request_end_date\n" +
+        "WHERE bt_build_id = :bt_build_id";
+    CommonUtil.validateSingleRowDbCommit(jdbc.update(sql, new SqlParamsBuilder()
+        .withOther("session_failure_reason", sessionFailureReason)
+        .withOther("error", error)
+        .withTimestampTimezone("session_request_end_date", DateTimeUtil.getCurrentUTC())
         .withInteger("bt_build_id", buildId).build()));
   }
   
@@ -248,21 +389,50 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
         .withInteger("bt_build_id", buildId).build(), (rs, rowNum) ->
         new RunnerPreferences()
             .setAbortOnFailure(rs.getBoolean("abort_on_failure"))
-        .setAetKeepSingleWindow(rs.getBoolean("aet_keep_single_window"))
-        .setAetUpdateUrlBlank(rs.getBoolean("aet_update_url_blank"))
-        .setAetResetTimeouts(rs.getBoolean("aet_reset_timeouts"))
-        .setAetDeleteAllCookies(rs.getBoolean("aet_delete_all_cookies")));
+            .setAetKeepSingleWindow(rs.getBoolean("aet_keep_single_window"))
+            .setAetUpdateUrlBlank(rs.getBoolean("aet_update_url_blank"))
+            .setAetResetTimeouts(rs.getBoolean("aet_reset_timeouts"))
+            .setAetDeleteAllCookies(rs.getBoolean("aet_delete_all_cookies")));
     if (runnerPreferences.size() == 0) {
       return Optional.empty();
     }
     return Optional.of(runnerPreferences.get(0));
   }
   
+  private List<TestVersionDetails> getTestVersionDetailsList(int buildId) {
+    // if start or end or both null, we get 0 by using coalesce
+    String sql = "SELECT bt_test_version_id, bt_test_version_name, bt_file_name, bt_test_name,\n" +
+        "bt_test_version_code_lines, status, zwl_executing_line,\n" +
+        "start_date AT TIME ZONE 'UTC' AS start_date,\n" +
+        "end_date AT TIME ZONE 'UTC' AS end_date\n" +
+        "FROM bt_build_tests LEFT JOIN bt_build_status USING (bt_build_id, bt_test_version_id)\n" +
+        "WHERE bt_build_id = :bt_build_id ORDER BY bt_build_tests_id";
+    LocalDateTime current = DateTimeUtil.getCurrentUTCAsLocal();
+    return jdbc.query(sql,
+        new SqlParamsBuilder().withInteger("bt_build_id", buildId).build(), (rs, rowNum) ->
+            new TestVersionDetails()
+                .setVersionId(rs.getInt("bt_test_version_id"))
+                .setVersionName(rs.getString("bt_test_version_name"))
+                .setStatus(CommonUtil.convertEnumFromSqlVal(rs, "status", TestStatus.class))
+                .setTotalLines(rs.getInt("bt_test_version_code_lines"))
+                .setCurrentLine(rs.getInt("zwl_executing_line"))
+                // Time taken calculation: when both are available, its retrieved normally. When
+                // both are null (in case build running), we take current instead so that return is
+                // 0. When start and non null but end is, we get difference of start and current.
+                .setTimeTakenMillis(ChronoUnit.MILLIS.between(
+                    DateTimeUtil.fromSqlTimestampIfNullGetGiven(current,
+                        rs.getTimestamp("start_date")),
+                    DateTimeUtil.fromSqlTimestampIfNullGetGiven(current,
+                        rs.getTimestamp("end_date"))))
+                .setFileName(rs.getString("bt_file_name"))
+                .setTestName(rs.getString("bt_test_name")));
+  }
+  
   @Override
   public Optional<CompletedBuildDetails> getCompletedBuildDetails(int buildId, int userId) {
     String sql = "SELECT b.name build_name, b.final_status,\n" +
         "b.create_date AT TIME ZONE 'UTC' AS create_date,\n" +
-        "EXTRACT(MILLISECONDS FROM (b.end_date - b.start_date)) AS test_time,\n" +
+        "EXTRACT(EPOCH FROM b.end_date) - EXTRACT(EPOCH FROM b.start_date) test_time_sec,\n" +
         "bc.name caps_name, bc.server_os, bc.wd_browser_name, bc.wd_browser_version,\n" +
         "b.server_screen_size, b.server_timezone_with_dst, b.shot_bucket_session_storage,\n" +
         "b.all_done_date AT TIME ZONE 'UTC' AS all_done_date FROM bt_build AS b\n" +
@@ -271,47 +441,27 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
         "WHERE b.bt_build_id = :bt_build_id AND p.zluser_id = :zluser_id\n" +
         "AND b.final_status IS NOT NULL";
     List<CompletedBuildDetails> completedBuildDetailsList = jdbc.query(sql,
-        new SqlParamsBuilder(userId).withInteger("bt_build_id", buildId).build(), (rs, rowNum) -> {
-          LocalDateTime allDoneDateLocal =
-              DateTimeUtil.sqlTimestampToLocal(rs.getTimestamp("all_done_date"));
-          Long allDoneDate = allDoneDateLocal != null
-              ? DateTimeUtil.utcTimeToEpochSecs(allDoneDateLocal)
-              : null;
-          return new CompletedBuildDetails()
-              .setBuildId(buildId)
-              .setBuildName(rs.getString("build_name"))
-              .setFinalStatus(TestStatus.valueOf(rs.getString("final_status")))
-              .setCreateDate(
-                  DateTimeUtil.sqlUTCTimestampToEpochSecs(rs.getTimestamp("create_date")))
-              .setTestTimeMillis(rs.getLong("test_time"))
-              .setBuildCapsName(rs.getString("caps_name"))
-              .setOs(rs.getString("server_os"))
-              .setBrowserName(rs.getString("wd_browser_name"))
-              .setBrowserVersion(rs.getString("wd_browser_version"))
-              .setResolution(rs.getString("server_screen_size"))
-              .setTimezone(rs.getString("server_timezone_with_dst"))
-              .setShotBucket(rs.getString("shot_bucket_session_storage"))
-              .setAllDoneDate(allDoneDate);
-        });
+        new SqlParamsBuilder(userId).withInteger("bt_build_id", buildId).build(), (rs, rowNum) ->
+            new CompletedBuildDetails()
+                .setBuildId(buildId)
+                .setBuildName(rs.getString("build_name"))
+                .setFinalStatus(TestStatus.valueOf(rs.getString("final_status")))
+                .setCreateDate(
+                    DateTimeUtil.sqlUTCTimestampToEpochSecs(rs.getTimestamp("create_date")))
+                .setTestTimeMillis(rs.getLong("test_time_sec") * 1000)
+                .setBuildCapsName(rs.getString("caps_name"))
+                .setOs(rs.getString("server_os"))
+                .setBrowserName(rs.getString("wd_browser_name"))
+                .setBrowserVersion(rs.getString("wd_browser_version"))
+                .setResolution(rs.getString("server_screen_size"))
+                .setTimezone(rs.getString("server_timezone_with_dst"))
+                .setShotBucket(rs.getString("shot_bucket_session_storage"))
+                .setAllDoneDate(CommonUtil.getEpochSecsOrNullFromSqlTimestamp(rs, "all_done_date")));
     if (completedBuildDetailsList.size() == 0) {
       return Optional.empty();
     }
     CompletedBuildDetails completedBuildDetails = completedBuildDetailsList.get(0);
-    // if start or end or both null, we get 0 by using coalesce
-    sql = "SELECT bt_test_version_id, bt_test_version_name, bt_file_name, bt_test_name,\n" +
-        "status, coalesce(EXTRACT(MILLISECONDS FROM (end_date - start_date)), 0) AS time_taken\n" +
-        "FROM bt_build_tests JOIN bt_build_status USING (bt_build_id, bt_test_version_id)\n" +
-        "WHERE bt_build_id = :bt_build_id and zluser_id = :zluser_id ORDER BY bt_build_tests_id";
-    List<TestVersionDetails> testVersionDetailsList = jdbc.query(sql,
-        new SqlParamsBuilder(userId).withInteger("bt_build_id", buildId).build(), (rs, rowNum) ->
-            new TestVersionDetails()
-                .setVersionId(rs.getInt("bt_test_version_id"))
-                .setVersionName(rs.getString("bt_test_version_name"))
-                .setStatus(TestStatus.valueOf(rs.getString("status")))
-                .setTimeTakenMillis(rs.getLong("time_taken"))
-                .setFileName(rs.getString("bt_file_name"))
-                .setTestName(rs.getString("bt_test_name")));
-    completedBuildDetails.setTestVersionDetailsList(testVersionDetailsList);
+    completedBuildDetails.setTestVersionDetailsList(getTestVersionDetailsList(buildId));
     return Optional.of(completedBuildDetails);
   }
   
@@ -326,5 +476,67 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
             .withInteger("bt_build_id", buildId)
             .withInteger("bt_test_version_id", versionId).build(),
         CommonUtil.getSingleString()).get(0);
+  }
+  
+  @Override
+  public List<RunningBuild> getRunningBuilds(Integer after, int projectId, int userId) {
+    String sql = "SELECT bt_build_id, build_key, bu.name, shot_bucket_session_storage,\n" +
+        "server_os, wd_browser_name\n" +
+        "FROM bt_build bu JOIN bt_build_captured_capabilities USING (bt_build_id)" +
+        "JOIN bt_project USING (bt_project_id)\n" +
+        "WHERE ((start_date IS NOT NULL AND all_done_date IS NULL)\n" +
+        "OR (session_request_start_date IS NOT NULL AND session_request_end_date IS NULL))\n" +
+        "AND bt_project_id = :bt_project_id AND zluser_id = :zluser_id\n";
+    SqlParamsBuilder paramsBuilder = new SqlParamsBuilder(projectId, userId);
+    if (after != null) {
+      sql += "AND bt_build_id > :after\n";
+      paramsBuilder.withInteger("after", after);
+    }
+    sql += "ORDER BY bu.create_date DESC";
+    return jdbc.query(sql, paramsBuilder.build(), (rs, rowNum) ->
+        new RunningBuild()
+            .setBuildId(rs.getInt("bt_build_id"))
+            .setBuildKey(rs.getString("build_key"))
+            .setBuildName(rs.getString("name"))
+            .setShotBucket(rs.getString("shot_bucket_session_storage"))
+            .setOs(rs.getString("server_os"))
+            .setBrowserName(rs.getString("wd_browser_name")));
+  }
+  
+  @Override
+  public RunningBuildSummary getRunningBuildSummary(int buildId, int userId) {
+    Build build = getBuild(buildId, userId)
+        .orElseThrow(() -> new UnauthorizedException("Invalid buildId or unauthorized user"));
+    if (build.getSessionRequestStartDate() == null) {
+      throw new IllegalArgumentException("Build " + buildId + " hasn't yet initiated new session");
+    }
+    // don't validate whether allDoneDate is not null because we will still show fully completed
+    // builds on the page for a few seconds to let user learn that it's done.
+    RunningBuildSummary runningBuildSummary = new RunningBuildSummary()
+        .setBuildId(buildId)
+        .setRunningForMillis(ChronoUnit.MILLIS.between(
+            DateTimeUtil.epochSecsToUTCLocal(build.getCreateDate()),
+            build.getAllDoneDate() != null
+                ? DateTimeUtil.epochSecsToUTCLocal(build.getAllDoneDate())
+                : DateTimeUtil.getCurrentUTCAsLocal()))
+        .setTestVersionDetailsList(getTestVersionDetailsList(buildId));
+    if (build.getSessionRequestEndDate() == null) {
+      // if we're acquiring session, return as no other detail is needed.
+      return runningBuildSummary.setAcquiringSession(true);
+    }
+    if (build.getSessionKey() == null) {
+      if (build.getSessionFailureReason() == null || build.getError() == null) {
+        throw new RuntimeException("Build " + buildId + "'s session req is done but there is no" +
+            " session key or failure reason");
+      }
+      // new session is failed, send error
+      return runningBuildSummary
+          .setNewSessionFail(true)
+          .setNewSessionFailureError(build.getError());
+    }
+    return runningBuildSummary
+        .setSessionKey(build.getSessionKey())
+        .setAllDone(build.getAllDoneDate() != null)
+        .setFinalStatus(build.getFinalStatus());
   }
 }

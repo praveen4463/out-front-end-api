@@ -5,11 +5,14 @@ import org.springframework.validation.annotation.Validated;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Map;
 
 @Validated
 public class BuildRunConfig {
+  
+  private String buildName;
 
   @Min(1)
   private int buildCapabilityId;
@@ -24,10 +27,20 @@ public class BuildRunConfig {
   
   private RunnerPreferences runnerPreferences;
   
+  @NotNull
   private BuildSourceType buildSourceType;
   
   @NotEmpty
   private List<Integer> versionIds;
+  
+  public String getBuildName() {
+    return buildName;
+  }
+  
+  public BuildRunConfig setBuildName(String buildName) {
+    this.buildName = buildName;
+    return this;
+  }
   
   public int getBuildCapabilityId() {
     return buildCapabilityId;

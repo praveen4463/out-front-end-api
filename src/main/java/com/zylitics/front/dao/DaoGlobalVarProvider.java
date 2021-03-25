@@ -83,6 +83,18 @@ public class DaoGlobalVarProvider extends AbstractDaoProvider implements GlobalV
   }
   
   @Override
+  public void duplicateGlobalVars(int duplicateBuildId, int originalBuildId) {
+    String sql = "INSERT INTO bt_build_zwl_globals (bt_build_id, key, value)\n" +
+        "SELECT :duplicate_build_id, key, value FROM bt_build_zwl_globals\n" +
+        "WHERE bt_build_id = :original_build_id";
+    SqlParameterSource namedParams = new SqlParamsBuilder()
+        .withInteger("duplicate_build_id", duplicateBuildId)
+        .withInteger("original_build_id", originalBuildId)
+        .build();
+    jdbc.update(sql, namedParams);
+  }
+  
+  @Override
   public void deleteGlobalVar(int globalVarId, int userId) {
     Preconditions.checkArgument(globalVarId > 0, "globalVarId is required");
     String sql = "DELETE FROM zwl_globals AS g\n" +

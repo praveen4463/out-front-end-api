@@ -182,6 +182,18 @@ public class DaoBuildVarProvider extends AbstractDaoProvider implements BuildVar
   }
   
   @Override
+  public void duplicateBuildVars(int duplicateBuildId, int originalBuildId) {
+    String sql = "INSERT INTO bt_build_zwl_build_variables (bt_build_id, key, value)\n" +
+        "SELECT :duplicate_build_id, key, value FROM bt_build_zwl_build_variables\n" +
+        "WHERE bt_build_id = :original_build_id";
+    SqlParameterSource namedParams = new SqlParamsBuilder()
+        .withInteger("duplicate_build_id", duplicateBuildId)
+        .withInteger("original_build_id", originalBuildId)
+        .build();
+    jdbc.update(sql, namedParams);
+  }
+  
+  @Override
   public void updateBuildVar(String columnId, String value, int buildVarId, int projectId,
                             int userId) {
     if (columnId.equals("value")) {

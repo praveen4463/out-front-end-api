@@ -6,6 +6,9 @@ import com.zylitics.front.model.RunError;
 import org.springframework.jdbc.core.RowMapper;
 
 import javax.annotation.Nullable;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -49,6 +52,36 @@ public class CommonUtil {
     return ((rs, rowNum) -> rs.getString(1));
   }
   
+  public static Integer getIntegerSqlVal(ResultSet rs, String field) throws SQLException {
+    Object val = rs.getObject(field);
+    return val == null ? null : (Integer) val;
+  }
+  
+  public static Long getLongSqlVal(ResultSet rs, String field) throws SQLException {
+    Object val = rs.getObject(field);
+    return val == null ? null : (Long) val;
+  }
+  
+  public static <T extends Enum<T>> T convertEnumFromSqlVal(
+      ResultSet rs,
+      String field,
+      Class<T> enumType) throws SQLException {
+    String val = rs.getString(field);
+    return val == null ? null : Enum.valueOf(enumType, val);
+  }
+  
+  public static Long getEpochSecsOrNullFromSqlTimestamp(ResultSet rs, String field)
+      throws SQLException {
+    LocalDateTime val = DateTimeUtil.sqlTimestampToLocal(rs.getTimestamp(field));
+    return val == null ? null : DateTimeUtil.utcTimeToEpochSecs(val);
+  }
+  
+  public static long getEpochSecsFromSqlTimestamp(ResultSet rs, String field)
+      throws SQLException {
+    return DateTimeUtil.utcTimeToEpochSecs(
+        DateTimeUtil.sqlTimestampToLocal(rs.getTimestamp(field)));
+  }
+  
   public static RunError.LineInfo getLineInfo(String lineCh) {
     String[] parts = lineCh.split(":");
     return new RunError.LineInfo()
@@ -56,7 +89,7 @@ public class CommonUtil {
         .setCh(Integer.parseInt(parts[1]));
   }
   
-  public static List<Integer> commaDelToNumericList(String commaDelimitedInt) {
+  public static List<Integer> commaDelToNumericList(@Nullable String commaDelimitedInt) {
     if (Strings.isNullOrEmpty(commaDelimitedInt)) {
       return new ArrayList<>(0);
     }

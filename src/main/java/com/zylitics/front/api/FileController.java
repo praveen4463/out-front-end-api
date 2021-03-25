@@ -44,10 +44,16 @@ public class FileController extends AbstractController {
   @GetMapping("/getWithTests")
   public ResponseEntity<List<File>> getFilesWithTests(
       @RequestParam(required = false) String fileIdsFilter,
+      @RequestParam(required = false) boolean excludeCode,
+      @RequestParam(required = false) boolean excludeNoCodeTests,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
   ) {
     List<Integer> fIds = CommonUtil.commaDelToNumericList(fileIdsFilter);
-    return ResponseEntity.ok(fileProvider.getFilesWithTests(fIds, getUserId(userInfo)));
+    return ResponseEntity.ok(fileProvider.getFilesWithTests(
+        fIds,
+        excludeCode,
+        excludeNoCodeTests,
+        getUserId(userInfo)));
   }
   
   // These endpoints are wrong, fileId should be coming from path and it should accept field that

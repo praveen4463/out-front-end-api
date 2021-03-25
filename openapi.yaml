@@ -462,6 +462,16 @@ paths:
           collectionFormat: csv
           items:
             type: integer
+        - in: query
+          name: excludeCode
+          description: should versions carry their code in response?
+          required: false
+          type: boolean
+        - in: query
+          name: excludeNoCodeTests
+          description: should exclude versions that have empty code?
+          required: false
+          type: boolean
         - $ref: '#/parameters/projectId'
       responses:
         200:
@@ -835,7 +845,6 @@ paths:
           description: Unexpected exception
           schema:
             $ref: '#/definitions/ApiError'
-
   /projects/{projectId}/builds:
     post:
       description: New build
@@ -849,9 +858,64 @@ paths:
         - $ref: '#/parameters/projectId'
       responses:
         200:
-          description: responds with NewBuildResponse
+          description: responds with NewSessionResponse
           schema:
-            $ref: '#/definitions/NewBuildResponse'
+            $ref: '#/definitions/NewSessionResponse'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /projects/{projectId}/builds/newBuildWithoutSession:
+    post:
+      description: New build without creating session
+      operationId: newBuildWithoutSession
+      parameters:
+        - in: body
+          name: buildRunConfig
+          required: true
+          schema:
+            $ref: '#/definitions/BuildRunConfig'
+        - $ref: '#/parameters/projectId'
+      responses:
+        200:
+          description: responds with new buildId
+          schema:
+            type: integer
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /builds/{buildId}/newSession:
+    post:
+      description: New session from a build without session
+      operationId: newSession
+      parameters:
+        - $ref: '#/parameters/buildId'
+      responses:
+        200:
+          description: responds with NewSessionResponse
+          schema:
+            $ref: '#/definitions/NewSessionResponse'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /builds/{buildId}/reRun:
+    post:
+      description: Re run build from a completed build
+      operationId: reRun
+      parameters:
+        - in: body
+          name: buildReRunConfig
+          required: true
+          schema:
+            $ref: '#/definitions/BuildReRunConfig'
+        - $ref: '#/parameters/buildId'
+      responses:
+        200:
+          description: responds with new buildId without session
+          schema:
+            type: integer
         default:
           description: Unexpected exception
           schema:
@@ -1138,6 +1202,42 @@ paths:
           description: OK
           schema:
             type: string
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /projects/{projectId}/builds/getRunningBuilds:
+    get:
+      description: Get running builds
+      operationId: getRunningBuilds
+      parameters:
+        - in: query
+          name: after
+          required: false
+          type: integer
+        - $ref: '#/parameters/projectId'
+      responses:
+        200:
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/RunningBuild'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /builds/{buildId}/getRunningBuildSummary:
+    get:
+      description: Get running build summary
+      operationId: getRunningBuildSummary
+      parameters:
+        - $ref: '#/parameters/buildId'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/RunningBuildSummary'
         default:
           description: Unexpected exception
           schema:
@@ -1582,7 +1682,7 @@ definitions:
         type: integer
       buildKey:
         type: string
-  NewBuildResponse:
+  NewSessionResponse:
     type: object
     properties:
       buildIdentifier:
@@ -1629,6 +1729,12 @@ definitions:
         type: array
         items:
           type: integer
+  BuildReRunConfig:
+    type: object
+    properties:
+      buildSourceType:
+        type: string
+        enum: *BuildSourceType
   BrowserNameToVersions:
     type: object
     properties:
@@ -1897,3 +2003,43 @@ definitions:
         type: boolean
       createDateFormatted:
         type: string
+  RunningBuild:
+    type: object
+    properties:
+      buildId:
+        type: integer
+      buildKey:
+        type: string
+      buildName:
+        type: string
+      shotBucket:
+        type: string
+      os:
+        type: string
+      browserName:
+        type: string
+  RunningBuildSummary:
+    type: object
+    properties:
+      buildId:
+        type: integer
+      sessionKey:
+        type: string
+      acquiringSession:
+        type: boolean
+      newSessionFail:
+        type: boolean
+      newSessionFailureError:
+        type: string
+      allDone:
+        type: boolean
+      runningForMillis:
+        type: integer
+        format: int64
+      finalStatus:
+        type: string
+        enum: *TestStatus
+      testVersionDetailsList:
+        type: array
+        items:
+          $ref: '#/definitions/TestVersionDetails'

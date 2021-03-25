@@ -1,6 +1,6 @@
 package com.zylitics.front.model;
 
-public class NewBuildResponse {
+public class NewSessionResponse {
   
   private BuildIdentifier buildIdentifier;
   
@@ -10,7 +10,7 @@ public class NewBuildResponse {
     return buildIdentifier;
   }
   
-  public NewBuildResponse setBuildIdentifier(BuildIdentifier buildIdentifier) {
+  public NewSessionResponse setBuildIdentifier(BuildIdentifier buildIdentifier) {
     this.buildIdentifier = buildIdentifier;
     return this;
   }
@@ -19,7 +19,7 @@ public class NewBuildResponse {
     return sessionId;
   }
   
-  public NewBuildResponse setSessionId(String sessionId) {
+  public NewSessionResponse setSessionId(String sessionId) {
     this.sessionId = sessionId;
     return this;
   }

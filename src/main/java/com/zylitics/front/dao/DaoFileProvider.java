@@ -68,7 +68,10 @@ public class DaoFileProvider extends AbstractDaoProvider implements FileProvider
   // allowed, spring says it's 100. Best is to have a table created using unnest passed with array
   // of parameters to IN clause.
   @Override
-  public List<File> getFilesWithTests(List<Integer> fileIdsFilter, int userId) {
+  public List<File> getFilesWithTests(List<Integer> fileIdsFilter,
+                                      boolean excludeCode,
+                                      boolean excludeNoCodeTests,
+                                      int userId) {
     boolean filterFiles = fileIdsFilter.size() > 0;
     // contains only files that have tests
     Map<Integer, File> fileIdToFile = new HashMap<>();
@@ -88,12 +91,11 @@ public class DaoFileProvider extends AbstractDaoProvider implements FileProvider
         "WHERE p.zluser_id = :zluser_id\n");
     
     if (filterFiles) {
-      sqlFile.append("AND f.bt_file_id IN (select * from unnest(:fileIds));");
-      fileParamsBuilder.withArray("fileIds", fileIdsFilter.toArray(), JDBCType.INTEGER);
-    } else {
-      sqlFile.append("LIMIT 10;"); // limit to 10 files when no filter is given, currently no
-      // nextPageToken is facilitated here. TODO: add nextPageToken here
+      sqlFile.append("AND f.bt_file_id IN (select * from unnest(:file_ids));");
+      fileParamsBuilder.withArray("file_ids", fileIdsFilter.toArray(), JDBCType.INTEGER);
     }
+    // TODO: Currently all files and fetched if no filter is given, we will soon have to implement
+    //  paging here.
     
     jdbc.query(sqlFile.toString(), fileParamsBuilder.build(), (rs) -> {
       int fId = rs.getInt("bt_file_id");
@@ -110,9 +112,9 @@ public class DaoFileProvider extends AbstractDaoProvider implements FileProvider
     
     String sqlTest = "SELECT bt_test_id, name, bt_file_id\n" +
         "FROM bt_test\n" +
-        "WHERE bt_file_id IN (select * from unnest(:fileIds))";
+        "WHERE bt_file_id IN (select * from unnest(:file_ids))";
     SqlParameterSource namedParamsTest = new SqlParamsBuilder()
-        .withArray("fileIds", fileIdToFile.keySet().toArray(), JDBCType.INTEGER).build();
+        .withArray("file_ids", fileIdToFile.keySet().toArray(), JDBCType.INTEGER).build();
   
     jdbc.query(sqlTest, namedParamsTest, (rs) -> {
       int fId = rs.getInt("bt_file_id");
@@ -122,14 +124,19 @@ public class DaoFileProvider extends AbstractDaoProvider implements FileProvider
           .setName(rs.getString("name"))
           .setFileId(fId);
       testIdToFileIdToTest.put(tId, new AbstractMap.SimpleImmutableEntry<>(fId, t));
-    });
+      });
   
-    String sqlVersion = "SELECT bt_test_version_id, name, bt_test_id, code, is_current\n" +
+    String sqlVersion = "SELECT bt_test_version_id, name, bt_test_id, is_current\n" +
+        (excludeCode ? "" : ", code\n") +
         "FROM bt_test_version\n" +
-        "WHERE bt_test_id IN (select * from unnest(:testIds))";
+        "WHERE bt_test_id IN (select * from unnest(:test_ids))\n";
+    if (excludeNoCodeTests) {
+      sqlVersion +=
+          "AND length(regexp_replace(coalesce(code, ''), '[\\n\\r\\t\\s]', '', 'g')) > 0";
+    }
   
     SqlParameterSource namedParamsVersion = new SqlParamsBuilder()
-        .withArray("testIds", testIdToFileIdToTest.keySet().toArray(), JDBCType.INTEGER).build();
+        .withArray("test_ids", testIdToFileIdToTest.keySet().toArray(), JDBCType.INTEGER).build();
     
     jdbc.query(sqlVersion, namedParamsVersion, (rs) -> {
       int tId = rs.getInt("bt_test_id");
@@ -137,13 +144,20 @@ public class DaoFileProvider extends AbstractDaoProvider implements FileProvider
           .setId(rs.getInt("bt_test_version_id"))
           .setName(rs.getString("name"))
           .setTestId(tId)
-          .setCode(rs.getString("code"))
+          .setCode(excludeCode ? null : rs.getString("code"))
           .setIsCurrent(rs.getBoolean("is_current"));
       testIdToVersions.put(tId, v);
     });
     
     testIdToVersions.keySet().forEach(tId ->
         testIdToFileIdToTest.get(tId).getValue().setVersions(testIdToVersions.get(tId)));
+    
+    if (excludeNoCodeTests) {
+      // remove any testId entry that has no version as result of excluding no code tests
+      testIdToFileIdToTest.entrySet().removeIf(entry ->
+          entry.getValue().getValue().getVersions() == null
+              || entry.getValue().getValue().getVersions().size() == 0);
+    }
   
     Map<Integer, List<Test>> fileIdToTests = testIdToFileIdToTest.values().stream()
         .collect(Collectors.groupingBy(Entry::getKey,
@@ -151,6 +165,12 @@ public class DaoFileProvider extends AbstractDaoProvider implements FileProvider
   
     fileIdToTests.keySet().forEach(fId ->
         fileIdToFile.get(fId).setTests(fileIdToTests.get(fId)));
+  
+    if (excludeNoCodeTests) {
+      // remove any fileId entry that has no test as result of excluding no code tests
+      fileIdToFile.entrySet().removeIf(entry -> entry.getValue().getTests() == null
+          || entry.getValue().getTests().size() == 0);
+    }
     
     return new ArrayList<>(fileIdToFile.values());
   }

@@ -19,6 +19,8 @@ public interface BuildVarProvider {
                                               Map<String, Integer> overrideKeyId,
                                               int buildId);
   
+  void duplicateBuildVars(int duplicateBuildId, int originalBuildId);
+  
   void updateBuildVar(String columnId, String value, int buildVarId, int projectId, int userId);
   
   void deleteBuildVar(int buildVarId, boolean isPrimary, int projectId, int userId);

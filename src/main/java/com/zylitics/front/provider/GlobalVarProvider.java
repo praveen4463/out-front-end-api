@@ -16,6 +16,8 @@ public interface GlobalVarProvider {
   
   void captureGlobalVars(int projectId, int buildId);
   
+  void duplicateGlobalVars(int duplicateBuildId, int originalBuildId);
+  
   void deleteGlobalVar(int globalVarId, int userId);
   
   List<CapturedVariable> getCapturedGlobalVars(int buildId, int userId);

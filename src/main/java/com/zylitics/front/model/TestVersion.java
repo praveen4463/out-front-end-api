@@ -20,6 +20,8 @@ public class TestVersion {
   @Nullable
   private String code;
   
+  private boolean isCodeBlank;
+  
   private boolean isCurrent;
   
   public int getId() {

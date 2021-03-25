@@ -22,5 +22,7 @@ public interface TestVersionProvider {
   
   void captureVersions(List<Integer> versionIds, int buildId);
   
+  void duplicateCapturedVersions(int duplicateBuildId, int originalBuildId);
+  
   void deleteVersion(int versionId, int userId);
 }

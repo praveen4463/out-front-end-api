@@ -15,6 +15,10 @@ public class DateTimeUtil {
     return OffsetDateTime.now(ZoneId.of("UTC"));
   }
   
+  public static LocalDateTime getCurrentUTCAsLocal() {
+    return LocalDateTime.now(ZoneId.of("UTC"));
+  }
+  
   // This method depends on the clock's timezone to get it's timezone, if clock's timezone is UTC,
   // returned timezone is UTC too.
   public static OffsetDateTime getCurrent(Clock clock) {
@@ -32,6 +36,14 @@ public class DateTimeUtil {
   public static LocalDateTime sqlTimestampToLocal(@Nullable Timestamp timestamp) {
     if (timestamp == null) {
       return null;
+    }
+    return timestamp.toLocalDateTime();
+  }
+  
+  public static LocalDateTime fromSqlTimestampIfNullGetGiven(LocalDateTime dateIfNull,
+                                                             @Nullable Timestamp timestamp) {
+    if (timestamp == null) {
+      return dateIfNull;
     }
     return timestamp.toLocalDateTime();
   }

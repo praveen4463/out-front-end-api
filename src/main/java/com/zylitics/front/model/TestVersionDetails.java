@@ -6,6 +6,10 @@ public class TestVersionDetails {
   
   private String versionName;
   
+  private int totalLines;
+  
+  private int currentLine;
+  
   private TestStatus status;
   
   private long timeTakenMillis;
@@ -29,6 +33,24 @@ public class TestVersionDetails {
   
   public TestVersionDetails setVersionName(String versionName) {
     this.versionName = versionName;
+    return this;
+  }
+  
+  public int getTotalLines() {
+    return totalLines;
+  }
+  
+  public TestVersionDetails setTotalLines(int totalLines) {
+    this.totalLines = totalLines;
+    return this;
+  }
+  
+  public int getCurrentLine() {
+    return currentLine;
+  }
+  
+  public TestVersionDetails setCurrentLine(int currentLine) {
+    this.currentLine = currentLine;
     return this;
   }
   
