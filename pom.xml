@@ -5,16 +5,16 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.zylitics</groupId>
   <artifactId>zl-front</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>0.2.0</version>
   <name>zl-front</name>
   <url>http://maven.apache.org</url>
   <properties>
     <elasticsearch.version>7.10.0</elasticsearch.version>
-    <google-cloud-kms.version>1.40.2</google-cloud-kms.version>
-    <google-cloud-storage.version>1.113.4</google-cloud-storage.version>
+    <google-cloud-kms.version>1.41.1</google-cloud-kms.version>
+    <google-cloud-storage.version>1.113.14</google-cloud-storage.version>
     <jib-maven-plugin.version>2.6.0</jib-maven-plugin.version>
-    <stackdriver-logback.version>0.118.7-alpha</stackdriver-logback.version>
-    <zwl.version>0.4.1-SNAPSHOT</zwl.version>
+    <stackdriver-logback.version>0.120.4-alpha</stackdriver-logback.version>
+    <zwl.version>0.4.1</zwl.version>
     <sendgrid.version>4.7.1</sendgrid.version>
     <firebase-admin.version>7.1.0</firebase-admin.version>
 
