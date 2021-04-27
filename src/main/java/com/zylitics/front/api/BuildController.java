@@ -227,6 +227,8 @@ public class BuildController extends AbstractController {
       BuildVM buildVM;
       try {
         buildVM = vmService.newBuildVM(new NewBuildVM()
+            .setBuildId(buildId)
+            .setRequireRunningVM(build.getSourceType() == BuildSourceType.IDE)
             .setDisplayResolution(build.getServerScreenSize())
             .setTimezone(build.getServerTimezone())
             .setBrowserName(buildCapability.getWdBrowserName())

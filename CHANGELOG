@@ -1,0 +1,9 @@
+**********
+v0.3.0
+**********
+* Setup code per wzgp updated api, vm zones in use added
+* k8s deployment config fixed and updated
+* Logging enhancer added
+* Fixed separate service account problem, we don't need a separate service account on VM, I've added
+  k8s service account into firebase project's IAM permission, now it should work
+* Fixed jib configuration per newest version

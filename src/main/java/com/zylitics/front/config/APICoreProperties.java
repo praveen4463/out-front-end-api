@@ -1,6 +1,5 @@
 package com.zylitics.front.config;
 
-import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.annotation.Validated;
@@ -9,6 +8,8 @@ import javax.annotation.concurrent.ThreadSafe;
 import javax.validation.Valid;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotEmpty;
+import java.util.Set;
 
 /**
  * All setters in this class allow only first time access by container, after that no values can
@@ -33,6 +34,19 @@ public class APICoreProperties {
   public void setProjectId(String projectId) {
     if (this.projectId == null) {
       this.projectId = projectId;
+    }
+  }
+  
+  @NotBlank
+  private String kmsProjectId;
+  
+  public String getKmsProjectId() {
+    return kmsProjectId;
+  }
+  
+  public void setKmsProjectId(String kmsProjectId) {
+    if (this.kmsProjectId == null) {
+      this.kmsProjectId = kmsProjectId;
     }
   }
   
@@ -445,6 +459,9 @@ public class APICoreProperties {
   
     @NotBlank
     private String wzgpAuthSecretCloudFile;
+  
+    @NotEmpty
+    private Set<String> vmZones;
     
     @Min(1)
     private Integer btbrPort;
@@ -500,7 +517,16 @@ public class APICoreProperties {
         this.wzgpAuthSecretCloudFile = wzgpAuthSecretCloudFile;
       }
     }
-    
+  
+    public Set<String> getVmZones() {
+      return vmZones;
+    }
+  
+    public Services setVmZones(Set<String> vmZones) {
+      this.vmZones = vmZones;
+      return this;
+    }
+  
     public String getBtbrVersion() {
       return btbrVersion;
     }

@@ -1,0 +1,10 @@
+# https://github.com/GoogleContainerTools/jib/tree/master/jib-maven-plugin#system-properties
+- build docker image via jib:
+mvn -DskipTest=true compile jib:build \
+    -Djib.container.environment=ESDB_HOST="$ESDB_PROD_HOST"
+or
+mvn -X -Djib.serialize=true -Djib.console=plain compile jib:build \
+    -Djib.container.environment=ESDB_HOST=$ESDB_PROD_HOST
+
+Process:
+1. Deploy endpoints config https://cloud.google.com/endpoints/docs/openapi/get-started-kubernetes#configuring_the_service_name_and_starting_the_service

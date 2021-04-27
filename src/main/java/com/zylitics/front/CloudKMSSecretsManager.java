@@ -48,7 +48,7 @@ class CloudKMSSecretsManager implements SecretsManager {
     // we'll throw if there is any error for now as storage and kms both have retry built-in and
     // i don't expect storage to throw any error that needs retry from user while 'getting' blob.
     byte[] content = storage.readAllBytes(blobId);
-    String resourceName = CryptoKeyName.format(apiCoreProperties.getProjectId(), "global",
+    String resourceName = CryptoKeyName.format(apiCoreProperties.getKmsProjectId(), "global",
         kms.getKeyRing(), kms.getKey());
     DecryptResponse decrypt = client.decrypt(resourceName, ByteString.copyFrom(content));
     // trim is important to remove unintended whitespaces.

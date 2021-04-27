@@ -1,6 +1,7 @@
 ---
 api-core:
-  project-id: zl-win-nodes
+  project-id: zl-infra-main
+  kms-project-id: zl-win-nodes
   front-end-base-url: https://zylitics.io
   cloud-kms:
     key-ring: zl-apps-auth-secret
@@ -13,7 +14,7 @@ api-core:
     shot-metadata-index: bt_shot_metadata
     zwl-program-output-index: zwl_program_output
     browser-index: browser
-    env-var-host: ESDB_HOST
+    env-var-host: ESDB_HOST # set using JIB to container's environment
   data-source:
     db-name: zbtp
     user-name: zbtp
@@ -42,6 +43,9 @@ api-core:
     wzgp-version: beta
     wzgp-auth-user: prod-test
     wzgp-auth-secret-cloud-file: zl-wzgp-prod-test-auth.encrypt
+    vm-zones:
+      - us-central1-c
+      - us-west1-b
     btbr-version: beta
     btbr-port: 8080
     btbr-auth-user: root

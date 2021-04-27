@@ -1,6 +1,10 @@
 package com.zylitics.front.model;
 
 public class NewBuildVM {
+  
+  private int buildId;
+  
+  private boolean requireRunningVM;
 
   private String os;
   
@@ -11,6 +15,24 @@ public class NewBuildVM {
   private String displayResolution;
   
   private String timezone;
+  
+  public int getBuildId() {
+    return buildId;
+  }
+  
+  public NewBuildVM setBuildId(int buildId) {
+    this.buildId = buildId;
+    return this;
+  }
+  
+  public boolean isRequireRunningVM() {
+    return requireRunningVM;
+  }
+  
+  public NewBuildVM setRequireRunningVM(boolean requireRunningVM) {
+    this.requireRunningVM = requireRunningVM;
+    return this;
+  }
   
   public String getOs() {
     return os;
