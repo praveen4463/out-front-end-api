@@ -12,8 +12,8 @@ metadata:
     environment: &ENVIRONMENT production
 # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#deploymentspec-v1-apps
 spec:
-  replicas: 3
-  revisionHistoryLimit: 3
+  replicas: 1
+  revisionHistoryLimit: 1
   selector:
     # Only pods matching this set of labels will be selected for this deployment. This helps during
     # update. If no pods are found matching, they're created, otherwise they're deleted and new
@@ -26,6 +26,10 @@ spec:
       labels: *LABELS
     # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#podspec-v1-core
     spec:
+      volumes:
+        - name: firebase-sa-key
+          secret:
+            secretName: firebase-sa-key
       # each pod contains two containers, the API and ESP proxy
       containers:
         - name: esp
@@ -43,9 +47,16 @@ spec:
           ]
           ports:
             - containerPort: 4000
+          volumeMounts:
+            - mountPath: /etc/sa-keys
+              name: firebase-sa-key
+              readOnly: true
         - name: *APP
           image: us.gcr.io/zl-infra-main/zl-front:0.3.0
           imagePullPolicy: IfNotPresent
+          env:
+            - name: FIREBASE_SA
+              value: "/etc/sa-keys/firebase-sa-key.json"
           ports:
             - name: &CONTAINER_PORT container-port
               containerPort: 8080
@@ -123,7 +134,10 @@ spec:
       http:
         paths:
           - path: /
+            pathType: Prefix
             backend:
-              serviceName: zl-front-service
-              servicePort: 80
+              service:
+                name: zl-front-service
+                port:
+                  number: 80
 ---

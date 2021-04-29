@@ -1,3 +1,9 @@
+# In some places we've taken invalid types as endpoints rejected those types. Per below, ESP won't
+# stop a request based on parameters and ignores them so we're good with some invalid types.
+# https://cloud.google.com/endpoints/docs/openapi/openapi-limitations
+# !!! If you see error like 'host domain is not verified' but https://cloud.google.com/endpoints/docs/openapi/verify-domain-name
+# shows you own the domain, just add gcloud account's email in the owner's list of domain.
+# Before running, make sure to switch gcloud's project so that api is created on correct project.
 swagger: "2.0"
 info:
   description: Zylitics front end api
@@ -17,6 +23,17 @@ consumes:
 produces:
   - application/json
 paths:
+  /actuator/health:
+    get:
+      operationId: health
+      security: []
+      responses:
+        200:
+          description: OK
+          schema:
+            type: string
+        default:
+          description: Unexpected exception
   /projects:
     post:
       description: Creates a new project
@@ -239,7 +256,7 @@ paths:
       parameters:
         - in: formData
           name: file
-          type: file
+          type: string # made it string rather than file as endpoints doesn't seem to support it
           required: true
         - in: formData
           name: fileName
@@ -307,7 +324,7 @@ paths:
       parameters:
         - in: formData
           name: file
-          type: file
+          type: string # made it string rather than file as endpoint doesn't seem to support file
           required: true
         - in: formData
           name: fileName
@@ -631,10 +648,7 @@ paths:
           name: versionIds
           description: comma separated versionIds to parse
           required: true
-          type: array
-          collectionFormat: csv
-          items:
-            type: integer
+          type: string # removed type array as Cloud endpoints doesn't seem to support it
       responses:
         200:
           description: OK
@@ -1287,7 +1301,7 @@ paths:
           description: Unexpected exception
           schema:
             $ref: '#/definitions/ApiError'
-  /users/current//updateUserProfile:
+  /users/current/updateUserProfile:
     patch:
       description: update currently logged-in user's profile
       operationId: updateUserProfile
@@ -1346,21 +1360,6 @@ parameters:
     type: string
     required: true
 definitions:
-  TestStatus:
-    type: string
-    enum: &TestStatus [RUNNING, ERROR, STOPPED, ABORTED, SUCCESS]
-  BuildSourceType:
-    type: string
-    enum: &BuildSourceType [IDE, CI, NOT_IDE]
-  PlanType:
-    type: string
-    enum: &PlanType [FREE, PAID]
-  Role:
-    type: string
-    enum: &Role [ADMIN, DEVELOPER]
-  EmailVerificationUserType:
-    type: string
-    enum: &EmailVerificationUserType [NORMAL, IN_ORGANIZATION, BETA_INVITEE]
   LineInfo:
     type: object
     properties:
@@ -1411,7 +1410,7 @@ definitions:
         type: string
       emailVerificationUserType:
         type: string
-        enum: *EmailVerificationUserType
+        enum: [NORMAL, IN_ORGANIZATION, BETA_INVITEE]
       organizationName:
         type: string
   EmailVerificationRequest:
@@ -1421,7 +1420,7 @@ definitions:
         type: string
       emailVerificationUserType:
         type: string
-        enum: *EmailVerificationUserType
+        enum: [NORMAL, IN_ORGANIZATION, BETA_INVITEE]
       senderName:
         type: string
       organizationId:
@@ -1430,7 +1429,7 @@ definitions:
         type: string
       role:
         type: string
-        enum: *Role
+        enum: [ADMIN, DEVELOPER]
   EmailChangeRequest:
     type: object
     properties:
@@ -1441,7 +1440,7 @@ definitions:
     properties:
       status:
         type: string
-        enum: *TestStatus
+        enum: [RUNNING, ERROR, STOPPED, ABORTED, SUCCESS]
       currentLine:
         type: integer
       output:
@@ -1483,7 +1482,7 @@ definitions:
     properties:
       planType:
         type: string
-        enum: *PlanType
+        enum: [FREE, PAID]
       planName:
         type: string
       displayName:
@@ -1515,7 +1514,7 @@ definitions:
         type: string
       role:
         type: string
-        enum: *Role
+        enum: [ADMIN, DEVELOPER]
       organizationId:
         type: integer
       shotBucketSessionStorage:
@@ -1561,12 +1560,12 @@ definitions:
         type: string
       finalStatus:
         type: string
-        enum: *TestStatus
+        enum: [RUNNING, ERROR, STOPPED, ABORTED, SUCCESS]
       error:
         type: string
       buildSourceType:
         type: string
-        enum: *BuildSourceType
+        enum: [IDE, CI, NOT_IDE]
       createDate:
         type: integer
         format: int64
@@ -1603,7 +1602,7 @@ definitions:
         type: string
       status:
         type: string
-        enum: *TestStatus
+        enum: [RUNNING, ERROR, STOPPED, ABORTED, SUCCESS]
       timeTakenMillis:
         type: integer
         format: int64
@@ -1620,7 +1619,7 @@ definitions:
         type: string
       finalStatus:
         type: string
-        enum: *TestStatus
+        enum: [RUNNING, ERROR, STOPPED, ABORTED, SUCCESS]
       createDate:
         type: integer
         format: int64
@@ -1724,7 +1723,7 @@ definitions:
         $ref: '#/definitions/RunnerPreferences'
       buildSourceType:
         type: string
-        enum: *BuildSourceType
+        enum: [IDE, CI, NOT_IDE]
       versionIds:
         type: array
         items:
@@ -1733,8 +1732,8 @@ definitions:
     type: object
     properties:
       buildSourceType:
-        type: string
-        enum: *BuildSourceType
+        type: array
+        enum: [IDE, CI, NOT_IDE]
   BrowserNameToVersions:
     type: object
     properties:
@@ -2038,7 +2037,7 @@ definitions:
         format: int64
       finalStatus:
         type: string
-        enum: *TestStatus
+        enum: [RUNNING, ERROR, STOPPED, ABORTED, SUCCESS]
       testVersionDetailsList:
         type: array
         items:

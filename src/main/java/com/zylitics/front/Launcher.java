@@ -44,6 +44,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 import javax.sql.DataSource;
+import java.io.FileInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
@@ -58,6 +59,8 @@ import java.util.*;
 public class Launcher {
   
   private static final String USER_INFO_REQ_HEADER = "X-Endpoint-API-UserInfo";
+  
+  private static final String FIREBASE_SERVICE_ACCOUNT_KEY = "FIREBASE_SA";
   
   public static void main(String[] args) {
     SpringApplication.run(Launcher.class, args);
@@ -159,8 +162,11 @@ public class Launcher {
   @Bean
   @Profile({"production", "e2e"})
   FirebaseApp firebaseApp() throws Exception {
+    String firebaseSAKey = System.getenv(FIREBASE_SERVICE_ACCOUNT_KEY);
+    Preconditions.checkArgument(!Strings.isNullOrEmpty(firebaseSAKey),
+        FIREBASE_SERVICE_ACCOUNT_KEY + " env. variable is not set.");
     FirebaseOptions options = FirebaseOptions.builder()
-        .setCredentials(GoogleCredentials.getApplicationDefault()).build();
+        .setCredentials(GoogleCredentials.fromStream(new FileInputStream(firebaseSAKey))).build();
   
     return FirebaseApp.initializeApp(options);
   }
@@ -199,6 +205,11 @@ public class Launcher {
         // Preflight requests must bypass auth check as they don't contain Auth header.
         // https://stackoverflow.com/a/15734032/1624454
         if (httpServletRequest.getMethod().equals(HttpMethod.OPTIONS.name())) {
+          chain.doFilter(request, response);
+          return;
+        }
+        // let actuator endpoints go through without auth
+        if (httpServletRequest.getRequestURI().contains("/actuator")) {
           chain.doFilter(request, response);
           return;
         }
