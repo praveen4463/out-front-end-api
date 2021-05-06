@@ -7,3 +7,8 @@ v0.3.0
 * Fixed separate service account problem, we don't need a separate service account on VM, I've added
   k8s service account into firebase project's IAM permission, now it should work
 * Fixed jib configuration per newest version
+**********
+v0.3.2
+**********
+* fixed logback so that project's root level could be changed
+* fixes in deployment

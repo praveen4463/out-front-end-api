@@ -13,8 +13,10 @@
       <loggingEventEnhancer>com.zylitics.front.logging.DefaultEnhancer</loggingEventEnhancer>
     </appender>
     <include resource="org/springframework/boot/logging/logback/defaults.xml" />
-
-    <root level="INFO">
+    <logger name="io.grpc.netty" level="ERROR" />
+    <logger name="io.netty" level="ERROR" />
+    <logger name="org.asynchttpclient.netty" level="ERROR" />
+    <root level="${rootLogLevel:-INFO}">
       <appender-ref ref="STACKDRIVER" />
     </root>
   </springProfile>
@@ -26,7 +28,7 @@
     <logger name="io.grpc.netty" level="ERROR" />
     <logger name="io.netty" level="ERROR" />
     <logger name="org.asynchttpclient.netty" level="ERROR" />
-    <root level="DEBUG">
+    <root level="${rootLogLevel:-INFO}">
       <appender-ref ref="CONSOLE" />
     </root>
   </springProfile>

@@ -10,7 +10,7 @@ info:
   title: Zylitics front end api
   # This version no. is just to showing in the console and has no affect on functionality, although it should be
   # updated whenever production version is updated.
-  version: 0.3.0
+  version: 0.3.2
 host: front.api.zylitics.io
 x-google-endpoints:
   - name: front.api.zylitics.io
@@ -23,7 +23,9 @@ consumes:
 produces:
   - application/json
 paths:
-  /actuator/health:
+  /actuator/health: # adding this here wasn't required if we just wanted it to be accessed from
+  # cluster's health check as it accesses the container directly without going to esp on container's
+  # port.
     get:
       operationId: health
       security: []
