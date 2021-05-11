@@ -43,6 +43,7 @@ api-core:
     wzgp-version: beta
     wzgp-auth-user: prod-test
     wzgp-auth-secret-cloud-file: zl-wzgp-prod-test-auth.encrypt
+    vm-machine-type: e2-standard-4
     vm-zones:
       - us-central1-c
       - us-west1-b

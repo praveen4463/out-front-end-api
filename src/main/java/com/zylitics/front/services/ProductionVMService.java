@@ -1,5 +1,6 @@
 package com.zylitics.front.services;
 
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.zylitics.front.SecretsManager;
 import com.zylitics.front.api.VMService;
@@ -7,6 +8,7 @@ import com.zylitics.front.config.APICoreProperties;
 import com.zylitics.front.model.BuildSourceType;
 import com.zylitics.front.model.BuildVM;
 import com.zylitics.front.model.NewBuildVM;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -26,6 +28,9 @@ public class ProductionVMService implements VMService {
   
   private final APICoreProperties apiCoreProperties;
   
+  // TODO: !!currently the private endpoint of wzgp we're using is not authorizing requests and sending
+  //  a auth header is useless. Do something in wzgp later so that all endpoints are secured even if
+  //  private.
   public ProductionVMService(WebClient.Builder webClientBuilder,
                              APICoreProperties apiCoreProperties,
                              SecretsManager secretsManager) {
@@ -36,13 +41,15 @@ public class ProductionVMService implements VMService {
         .responseTimeout(Duration.ofMinutes(RESPONSE_TIMEOUT_MIN));
     this.webClient = webClientBuilder
         .baseUrl(services.getWzgpEndpoint() + "/" + services.getWzgpVersion())
-        .defaultHeader("Authorization", Base64.getEncoder()
-            .encodeToString((services.getWzgpAuthUser() + ":" + secret).getBytes()))
+        .defaultHeaders(httpHeaders ->
+            httpHeaders.setBasicAuth(HttpHeaders.encodeBasicAuth(services.getWzgpAuthUser(),
+                secret, Charsets.UTF_8)))
         .clientConnector(new ReactorClientHttpConnector(httpClient)).build();
   }
   
   @Override
   public BuildVM newBuildVM(NewBuildVM newBuildVM) {
+    APICoreProperties.Services services = apiCoreProperties.getServices();
     GetVMRequest.BuildProperties buildProperties = new GetVMRequest.BuildProperties();
     buildProperties.setBuildId(newBuildVM.getBuildId());
   
@@ -55,6 +62,7 @@ public class ProductionVMService implements VMService {
   
     GetVMRequest.GridProperties gridProperties = new GetVMRequest.GridProperties();
     gridProperties
+        .setMachineType(services.getVmMachineType())
         .setCreateExternalIP(true)
         .setMetadata(ImmutableMap.of(
             "user-screen", newBuildVM.getDisplayResolution(),
@@ -69,7 +77,7 @@ public class ProductionVMService implements VMService {
         .setResourceSearchParams(resourceSearchParams)
         .setGridProperties(gridProperties);
   
-    List<String> availableZones = new ArrayList<>(apiCoreProperties.getServices().getVmZones());
+    List<String> availableZones = new ArrayList<>(services.getVmZones());
     int totalZones = availableZones.size();
     String randomZone = availableZones.get(random.nextInt(totalZones));
     String endpoint = String.format("/zones/%s/grids", randomZone);
@@ -177,9 +185,20 @@ public class ProductionVMService implements VMService {
   
     private static class GridProperties {
   
+      private String machineType;
+  
       private boolean createExternalIP;
   
       private Map<String, String> metadata;
+  
+      public String getMachineType() {
+        return machineType;
+      }
+  
+      public GridProperties setMachineType(String machineType) {
+        this.machineType = machineType;
+        return this;
+      }
   
       public boolean isCreateExternalIP() {
         return createExternalIP;

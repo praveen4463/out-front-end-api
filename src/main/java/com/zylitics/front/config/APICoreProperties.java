@@ -459,6 +459,9 @@ public class APICoreProperties {
   
     @NotBlank
     private String wzgpAuthSecretCloudFile;
+    
+    @NotBlank
+    private String vmMachineType;
   
     @NotEmpty
     private Set<String> vmZones;
@@ -518,13 +521,24 @@ public class APICoreProperties {
       }
     }
   
+    public String getVmMachineType() {
+      return vmMachineType;
+    }
+  
+    public void setVmMachineType(String vmMachineType) {
+      if (this.vmMachineType == null) {
+        this.vmMachineType = vmMachineType;
+      }
+    }
+  
     public Set<String> getVmZones() {
       return vmZones;
     }
   
-    public Services setVmZones(Set<String> vmZones) {
-      this.vmZones = vmZones;
-      return this;
+    public void setVmZones(Set<String> vmZones) {
+      if (this.vmZones == null) {
+        this.vmZones = vmZones;
+      }
     }
   
     public String getBtbrVersion() {
