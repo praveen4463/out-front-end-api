@@ -27,11 +27,22 @@ api-core:
     # https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing
     min-idle-conn-pool: 2
   storage:
+    # !! Note: remember to make a 'dev' version of all buckets and add them in other profiled yaml files.
     server-logs-bucket: zl-server-logs
     elem-shots-bucket: zl-elem-shots
     user-data-bucket: zl-user-data
-    user-uploads-storage-dir-tmpl : USER_ID/uploads
     common-uploads-bucket: zl-common-uploads
+    shot-bucket-au: zl-session-assets-au
+    shot-bucket-tok: zl-session-assets-tok
+    shot-bucket-hk: zl-session-assets-hk
+    shot-bucket-mum: zl-session-assets-mum
+    shot-bucket-eu: zl-session-assets-eu
+    shot-bucket-uk: zl-session-assets-uk
+    shot-bucket-la: zl-session-assets-la
+    shot-bucket-slake: zl-session-assets-slake
+    shot-bucket-usc: zl-session-assets-usc
+    shot-bucket-nv: zl-session-assets-nv
+    user-uploads-storage-dir-tmpl : USER_ID/uploads
     driver-logs-dir: driver-logs
     driver-logs-file: driver.log
     browser-perf-logs-dir: performance-logs

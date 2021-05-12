@@ -77,7 +77,7 @@ public class UserController extends AbstractController {
     String password = newUserRequest.getPassword().trim();
     Preconditions.checkArgument(password.length() >= 6, "Password requirement not met");
     String shotBucketSessionStorage =
-        Common.getShotBucketPerOffset(newUserRequest.getUtcOffsetInMinutes());
+        Common.getShotBucketPerOffset(newUserRequest.getUtcOffsetInMinutes(), apiCoreProperties);
     String organizationName = newUserRequest.getOrganizationName();
     NewUser newUser;
     if (emailVerification.getOrganizationId() != null) {

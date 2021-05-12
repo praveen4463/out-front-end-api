@@ -1,5 +1,6 @@
 package com.zylitics.front.api;
 
+import com.zylitics.front.config.APICoreProperties;
 import org.springframework.http.ResponseEntity;
 
 public class Common {
@@ -35,7 +36,9 @@ public class Common {
   // !!currently not considering dst for US/UK timezones
   // UTC + 5:30 offsetMinutes will be -330 and UTC - 8:00 will be 480
   // !!! All listed buckets must exist
-  public static String getShotBucketPerOffset(int offsetMinutes) {
+  public static String getShotBucketPerOffset(int offsetMinutes,
+                                              APICoreProperties apiCoreProperties) {
+    APICoreProperties.Storage storage = apiCoreProperties.getStorage();
     boolean negativeOffset = offsetMinutes < 0; // keep whether we've a negative offset as we will
     // make it positive for easy calculations.
     double hoursOffset = (double) offsetMinutes / 60;
@@ -47,37 +50,37 @@ public class Common {
     if (negativeOffset || hoursOffset == 0) {
       // we're on UTC + 00:00 and greater timezones
       if (hoursOffset > 9) {
-        return "zl-session-assets-au";
+        return storage.getShotBucketAu();
       }
       if (hoursOffset == 9) {
-        return "zl-session-assets-tok";
+        return storage.getShotBucketTok();
       }
       if (hoursOffset >= 8) {
-        return "zl-session-assets-hk";
+        return storage.getShotBucketHk();
       }
       if (hoursOffset >= 4) {
-        return "zl-session-assets-mum";
+        return storage.getShotBucketMum();
       }
       if (hoursOffset >= 1) {
-        return "zl-session-assets-eu";
+        return storage.getShotBucketEu();
       }
-      return "zl-session-assets-uk";
+      return storage.getShotBucketUk();
     }
     // we're on UTC - 01:00 and lesser timezones
     if (hoursOffset >= 8) {
       // UTC-8, Los Angeles, Las Vegas
-      return "zl-session-assets-la";
+      return storage.getShotBucketLa();
     }
     if (hoursOffset >= 7) {
-      return "zl-session-assets-slake";
+      return storage.getShotBucketSlake();
     }
     if (hoursOffset >= 6) {
-      return "zl-session-assets-usc";
+      return storage.getShotBucketUsc();
     }
     if (hoursOffset >= 4) {
-      return "zl-session-assets-nv";
+      return storage.getShotBucketNv();
     }
-    return "zl-session-assets-usc"; // default is us-central
+    return storage.getShotBucketUsc(); // default is us-central
   }
   
   public static String getUserDisplayName(String firstName, String lastName) {

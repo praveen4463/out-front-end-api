@@ -300,6 +300,36 @@ public class APICoreProperties {
   public static class Storage {
   
     @NotBlank
+    private String shotBucketAu;
+  
+    @NotBlank
+    private String shotBucketTok;
+  
+    @NotBlank
+    private String shotBucketHk;
+  
+    @NotBlank
+    private String shotBucketMum;
+  
+    @NotBlank
+    private String shotBucketEu;
+    
+    @NotBlank
+    private String shotBucketUk;
+  
+    @NotBlank
+    private String shotBucketLa;
+  
+    @NotBlank
+    private String shotBucketSlake;
+  
+    @NotBlank
+    private String shotBucketUsc;
+  
+    @NotBlank
+    private String shotBucketNv;
+  
+    @NotBlank
     private String serverLogsBucket;
   
     @NotBlank
@@ -331,6 +361,106 @@ public class APICoreProperties {
   
     @Min(10)
     private Integer maxCommonFileSizeMb;
+  
+    public String getShotBucketAu() {
+      return shotBucketAu;
+    }
+  
+    public void setShotBucketAu(String shotBucketAu) {
+      if (this.shotBucketAu == null) {
+        this.shotBucketAu = shotBucketAu;
+      }
+    }
+  
+    public String getShotBucketTok() {
+      return shotBucketTok;
+    }
+  
+    public void setShotBucketTok(String shotBucketTok) {
+      if (this.shotBucketTok == null) {
+        this.shotBucketTok = shotBucketTok;
+      }
+    }
+  
+    public String getShotBucketHk() {
+      return shotBucketHk;
+    }
+  
+    public void setShotBucketHk(String shotBucketHk) {
+      if (this.shotBucketHk == null) {
+        this.shotBucketHk = shotBucketHk;
+      }
+    }
+  
+    public String getShotBucketMum() {
+      return shotBucketMum;
+    }
+  
+    public void setShotBucketMum(String shotBucketMum) {
+      if (this.shotBucketMum == null) {
+        this.shotBucketMum = shotBucketMum;
+      }
+    }
+  
+    public String getShotBucketEu() {
+      return shotBucketEu;
+    }
+  
+    public void setShotBucketEu(String shotBucketEu) {
+      if (this.shotBucketEu == null) {
+        this.shotBucketEu = shotBucketEu;
+      }
+    }
+  
+    public String getShotBucketUk() {
+      return shotBucketUk;
+    }
+  
+    public void setShotBucketUk(String shotBucketUk) {
+      if (this.shotBucketUk == null) {
+        this.shotBucketUk = shotBucketUk;
+      }
+    }
+  
+    public String getShotBucketLa() {
+      return shotBucketLa;
+    }
+  
+    public void setShotBucketLa(String shotBucketLa) {
+      if (this.shotBucketLa == null) {
+        this.shotBucketLa = shotBucketLa;
+      }
+    }
+  
+    public String getShotBucketSlake() {
+      return shotBucketSlake;
+    }
+  
+    public void setShotBucketSlake(String shotBucketSlake) {
+      if (this.shotBucketSlake == null) {
+        this.shotBucketSlake = shotBucketSlake;
+      }
+    }
+  
+    public String getShotBucketUsc() {
+      return shotBucketUsc;
+    }
+  
+    public void setShotBucketUsc(String shotBucketUsc) {
+      if (this.shotBucketUsc == null) {
+        this.shotBucketUsc = shotBucketUsc;
+      }
+    }
+  
+    public String getShotBucketNv() {
+      return shotBucketNv;
+    }
+  
+    public void setShotBucketNv(String shotBucketNv) {
+      if (this.shotBucketNv == null) {
+        this.shotBucketNv = shotBucketNv;
+      }
+    }
   
     public String getServerLogsBucket() {
       return serverLogsBucket;

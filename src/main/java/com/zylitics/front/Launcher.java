@@ -62,6 +62,8 @@ public class Launcher {
   
   private static final String FIREBASE_SERVICE_ACCOUNT_KEY = "FIREBASE_SA";
   
+  private static final String FIREBASE_LOCAL_SERVICE_ACCOUNT_KEY = "FIREBASE_SA_LOCAL";
+  
   public static void main(String[] args) {
     SpringApplication.run(Launcher.class, args);
   }
@@ -160,7 +162,7 @@ public class Launcher {
   }
   
   @Bean
-  @Profile({"production", "e2e"})
+  @Profile({"production"})
   FirebaseApp firebaseApp() throws Exception {
     String firebaseSAKey = System.getenv(FIREBASE_SERVICE_ACCOUNT_KEY);
     Preconditions.checkArgument(!Strings.isNullOrEmpty(firebaseSAKey),
@@ -168,6 +170,18 @@ public class Launcher {
     FirebaseOptions options = FirebaseOptions.builder()
         .setCredentials(GoogleCredentials.fromStream(new FileInputStream(firebaseSAKey))).build();
   
+    return FirebaseApp.initializeApp(options);
+  }
+  
+  @Bean
+  @Profile({"e2e"})
+  FirebaseApp firebaseAppLocal() throws Exception {
+    String firebaseSAKey = System.getenv(FIREBASE_LOCAL_SERVICE_ACCOUNT_KEY);
+    Preconditions.checkArgument(!Strings.isNullOrEmpty(firebaseSAKey),
+        FIREBASE_LOCAL_SERVICE_ACCOUNT_KEY + " env. variable is not set.");
+    FirebaseOptions options = FirebaseOptions.builder()
+        .setCredentials(GoogleCredentials.fromStream(new FileInputStream(firebaseSAKey))).build();
+    
     return FirebaseApp.initializeApp(options);
   }
   

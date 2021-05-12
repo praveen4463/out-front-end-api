@@ -7,5 +7,7 @@ mvn -X -Djib.serialize=true -Djib.console=plain compile jib:build \
     -Djib.container.environment=ESDB_HOST=$ESDB_PROD_HOST
 
 Process:
-1. Deploy endpoints config: gcloud endpoints services deploy openapi.yaml --project=zl-infra-main
+1. Build and push new docker image via jib
+2. Apply new k8s deployment
+3. Deploy endpoints config: gcloud endpoints services deploy openapi.yaml --project=zl-infra-main
 See https://cloud.google.com/endpoints/docs/openapi/get-started-kubernetes#configuring_the_service_name_and_starting_the_service
