@@ -120,8 +120,8 @@ metadata:
     # within 'read' timeout, also it expects to send another request to same pod within 'send'
     # timeout during a connection. if it won't hear from server or won't hear from client,
     # connection will be closed.
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "100"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
     # !! don't use in production, allows http access.
     # https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#server-side-https-enforcement-through-redirect
     # https://github.com/kubernetes/ingress-nginx/issues/1567
