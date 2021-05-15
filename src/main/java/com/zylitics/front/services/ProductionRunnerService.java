@@ -1,24 +1,16 @@
 package com.zylitics.front.services;
 
-import com.zylitics.front.SecretsManager;
+import com.zylitics.front.api.RunnerService;
 import com.zylitics.front.config.APICoreProperties;
 import com.zylitics.front.util.UrlChecker;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.client.reactive.ReactorClientHttpConnector;
-import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.netty.http.client.HttpClient;
 
-import java.time.Duration;
-import java.util.Base64;
 import java.util.concurrent.TimeUnit;
 
-@Service
-public class RunnerService {
-  
-  private static final int RESPONSE_TIMEOUT_MIN = 2;
+public class ProductionRunnerService implements RunnerService {
   
   private static final int VM_AVAILABILITY_TIMEOUT_MIN = 2;
   
@@ -26,22 +18,12 @@ public class RunnerService {
   
   private final APICoreProperties apiCoreProperties;
   
-  public RunnerService(WebClient.Builder webClientBuilder,
-                       SecretsManager secretsManager,
-                       APICoreProperties apiCoreProperties) {
+  public ProductionRunnerService(APICoreProperties apiCoreProperties, WebClient webClient) {
     this.apiCoreProperties = apiCoreProperties;
-    APICoreProperties.Services services = apiCoreProperties.getServices();
-    String secret = secretsManager.getSecretAsPlainText(services.getBtbrAuthSecretCloudFile());
-    String btbrUserAuthHeader = Base64.getEncoder().encodeToString((services.getBtbrAuthUser()
-        + ":" + secret).getBytes());
-    HttpClient httpClient = HttpClient.create()
-        .responseTimeout(Duration.ofMinutes(RESPONSE_TIMEOUT_MIN));
-    this.webClient = webClientBuilder
-        .clientConnector(new ReactorClientHttpConnector(httpClient))
-        .defaultHeader("Authorization", btbrUserAuthHeader)
-        .build();
+    this.webClient = webClient;
   }
   
+  @Override
   public String newSession(String runnerIP, int buildId) {
     APICoreProperties.Services servicesProps = apiCoreProperties.getServices();
     String baseUrl = buildBaseUrl(runnerIP, servicesProps);
@@ -64,6 +46,7 @@ public class RunnerService {
     return response.getSessionId();
   }
   
+  @Override
   public boolean stopBuild(String runnerIP, int buildId) {
     APICoreProperties.Services servicesProps = apiCoreProperties.getServices();
     String baseUrl = buildBaseUrl(runnerIP, servicesProps);

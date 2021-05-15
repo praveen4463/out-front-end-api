@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 
+// TODO: We shouldn't use secrets in local as it is in btbr, but here due to email service and it's
+//  usage locally we've to use it.
 @Service
 class CloudKMSSecretsManager implements SecretsManager {
   

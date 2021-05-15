@@ -65,7 +65,7 @@ api-core:
     local-vm-env-var: VM_LOCAL
     sendgrid-api-key-secret-cloud-file: sendgrid-primary-mail-sender.encrypted
   email:
-    issue-report-receiver: emp1@zylitics.io
+    issue-report-receiver: support@zylitics.io
     app-internal-email-sender: internal@zylitics.io
     no-reply-email-sender: noreply@zylitics.io
     email-beta-invite-tmp-id: d-283d2eb137f5409f8e8cc1337429319e

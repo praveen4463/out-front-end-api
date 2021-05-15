@@ -17,3 +17,11 @@ v0.3.3
 **********
 * Upgrade runner machine to 4 cpu
 * fixed an endpoint in openapi
+**********
+v0.3.4
+**********
+* Changed support query email to support@zy..
+* runner, esdb are now not using secrets locally, their production beans are separated.
+* changed nginx config to allow 5mins of timeout for long running create build requests
+* Session assets buckets are now being taken from props file, separate file for non-prod contains their dev versions
+* configured separate firebase project for dev env

@@ -13,10 +13,13 @@ import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import com.zylitics.front.api.RunnerService;
 import com.zylitics.front.api.VMService;
 import com.zylitics.front.config.APICoreProperties;
 import com.zylitics.front.model.EspErrorResponse;
+import com.zylitics.front.services.LocalRunnerService;
 import com.zylitics.front.services.LocalVMService;
+import com.zylitics.front.services.ProductionRunnerService;
 import com.zylitics.front.services.ProductionVMService;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
@@ -34,10 +37,12 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.netty.http.client.HttpClient;
 
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
@@ -46,6 +51,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.sql.DataSource;
 import java.io.FileInputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.*;
 
 // TODO: I am not too sure what DataAccessExceptions should be re-tried, let's first watch logs and
@@ -79,9 +85,9 @@ public class Launcher {
   // hoped that it will delete idle connections from pool after a certain time.
   // TODO: see if there is something to set that idle timeout for connections in pool.
   @Bean
-  @Profile({"production", "e2e"})
-  RestHighLevelClient restHighLevelClient(APICoreProperties apiCoreProperties,
-                                          SecretsManager secretsManager) {
+  @Profile({"production"})
+  RestHighLevelClient restHighLevelClientProduction(APICoreProperties apiCoreProperties,
+                                                    SecretsManager secretsManager) {
     APICoreProperties.Esdb esdb = apiCoreProperties.getEsdb();
     
     // TODO (optional): Should've in secret store but it's in env since I wrote infra scripts that
@@ -101,6 +107,16 @@ public class Launcher {
     return new RestHighLevelClient(RestClient.builder(HttpHost.create(esDBHostFromEnv))
         .setHttpClientConfigCallback(httpClientBuilder ->
             httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider)));
+  }
+  
+  @Bean
+  @Profile({"e2e"})
+  RestHighLevelClient restHighLevelClientLocal(APICoreProperties apiCoreProperties) {
+    APICoreProperties.Esdb esdb = apiCoreProperties.getEsdb();
+    String esDBHostFromEnv = System.getenv(esdb.getEnvVarHost());
+    Preconditions.checkArgument(!Strings.isNullOrEmpty(esDBHostFromEnv),
+        esdb.getEnvVarHost() + " env. variable is not set.");
+    return new RestHighLevelClient(RestClient.builder(HttpHost.create(esDBHostFromEnv)));
   }
   
   // https://github.com/brettwooldridge/HikariCP
@@ -159,6 +175,39 @@ public class Launcher {
   @Profile("e2e")
   VMService localVMService(APICoreProperties apiCoreProperties) {
     return new LocalVMService(apiCoreProperties);
+  }
+  
+  @Bean
+  @Profile("production")
+  RunnerService productionRunnerService(APICoreProperties apiCoreProperties,
+                                        WebClient.Builder webClientBuilder,
+                                        SecretsManager secretsManager) {
+    APICoreProperties.Services services = apiCoreProperties.getServices();
+    String secret = secretsManager.getSecretAsPlainText(services.getBtbrAuthSecretCloudFile());
+    String btbrUserAuthHeader = Base64.getEncoder().encodeToString((services.getBtbrAuthUser()
+        + ":" + secret).getBytes());
+    HttpClient httpClient = HttpClient.create()
+        .responseTimeout(Duration.ofMinutes(2));
+    WebClient webClient = webClientBuilder
+        .clientConnector(new ReactorClientHttpConnector(httpClient))
+        .defaultHeader("Authorization", btbrUserAuthHeader)
+        .build();
+    return new ProductionRunnerService(apiCoreProperties, webClient);
+  }
+  
+  @Bean
+  @Profile("e2e")
+  RunnerService localRunnerService(APICoreProperties apiCoreProperties,
+                                   WebClient.Builder webClientBuilder) {
+    String localBtbrAutSecret = System.getenv("LOCAL_BTBR_AUTH_SECRET");
+    if (localBtbrAutSecret == null) {
+      localBtbrAutSecret = "local";
+    }
+    WebClient webClient = webClientBuilder
+        .clientConnector(new ReactorClientHttpConnector(HttpClient.create()))
+        .defaultHeader("Authorization", localBtbrAutSecret)
+        .build();
+    return new LocalRunnerService(apiCoreProperties, webClient);
   }
   
   @Bean
