@@ -277,7 +277,7 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
         .withBoolean("wd_ie_disable_native_events",
             buildCapability.isWdIeDisableNativeEvents())
         .withBoolean("wd_ie_destructively_ensure_clean_session",
-            buildCapability.isWdIeDestructivelyEnsureCleanSession())
+            true) // !! We're always cleaning IE before executing the test, this is important.
         .withVarchar("wd_ie_log_level", buildCapability.getWdIeLogLevel())
         .withBoolean("wd_chrome_verbose_logging", buildCapability.isWdChromeVerboseLogging())
         .withBoolean("wd_chrome_silent_output", buildCapability.isWdChromeSilentOutput())
