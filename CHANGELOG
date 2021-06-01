@@ -31,3 +31,7 @@ v0.3.5
 * Upgraded zwl to 0.4.2
 * always sending true to IE cache/history clear flag, this is done from here because we want this
   true in all environment, all clients.
+**********
+v0.3.6
+**********
+* Added controller for invitation request
