@@ -9,5 +9,6 @@ mvn -X -Djib.serialize=true -Djib.console=plain compile jib:build \
 Process:
 1. Build and push new docker image via jib
 2. Apply new k8s deployment
-3. Deploy endpoints config: gcloud endpoints services deploy openapi.yaml --project=zl-infra-main
+3. If this is a change in any api endpoint, don't forget to make the changes in openapi file.
+4. Deploy endpoints config: gcloud endpoints services deploy openapi.yaml --project=zl-infra-main
 See https://cloud.google.com/endpoints/docs/openapi/get-started-kubernetes#configuring_the_service_name_and_starting_the_service

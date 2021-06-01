@@ -1320,6 +1320,23 @@ paths:
           description: Unexpected exception
           schema:
             $ref: '#/definitions/ApiError'
+  /invitationRequest:
+    post:
+      description: Request invitation
+      operationId: invitationRequest
+      parameters:
+        - in: body
+          name: newInvitationRequest
+          required: true
+          schema:
+            $ref: '#/definitions/NewInvitationRequest'
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
 securityDefinitions:
   firebase:
     authorizationUrl: ""
@@ -2044,3 +2061,10 @@ definitions:
         type: array
         items:
           $ref: '#/definitions/TestVersionDetails'
+  NewInvitationRequest:
+    type: object
+    required:
+      - email
+    properties:
+      email:
+        type: string
