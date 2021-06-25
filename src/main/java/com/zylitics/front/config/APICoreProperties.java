@@ -610,6 +610,9 @@ public class APICoreProperties {
     
     @NotBlank
     private String sendgridApiKeySecretCloudFile;
+  
+    @NotBlank
+    private String discourseSsoSecretCloudFile;
     
     public String getWzgpEndpoint() {
       return wzgpEndpoint;
@@ -728,6 +731,16 @@ public class APICoreProperties {
     public void setSendgridApiKeySecretCloudFile(String sendgridApiKeySecretCloudFile) {
       if (this.sendgridApiKeySecretCloudFile == null) {
         this.sendgridApiKeySecretCloudFile = sendgridApiKeySecretCloudFile;
+      }
+    }
+  
+    public String getDiscourseSsoSecretCloudFile() {
+      return discourseSsoSecretCloudFile;
+    }
+  
+    public void setDiscourseSsoSecretCloudFile(String discourseSsoSecretCloudFile) {
+      if (this.discourseSsoSecretCloudFile == null) {
+        this.discourseSsoSecretCloudFile = discourseSsoSecretCloudFile;
       }
     }
   }

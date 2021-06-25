@@ -64,6 +64,7 @@ api-core:
     btbr-auth-secret-cloud-file: btbr-api-key.encrypted
     local-vm-env-var: VM_LOCAL
     sendgrid-api-key-secret-cloud-file: sendgrid-primary-mail-sender.encrypted
+    discourse-sso-secret-cloud-file: discource-sso.encrypt
   email:
     issue-report-receiver: support@zylitics.io
     app-internal-email-sender: internal@zylitics.io

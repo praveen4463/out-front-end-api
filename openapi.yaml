@@ -10,7 +10,7 @@ info:
   title: Zylitics front end api
   # This version no. is just to showing in the console and has no affect on functionality, although it should be
   # updated whenever production version is updated.
-  version: 0.3.6
+  version: 0.3.7
 host: front.api.zylitics.io
 x-google-endpoints:
   - name: front.api.zylitics.io
@@ -1337,6 +1337,28 @@ paths:
           description: Unexpected exception
           schema:
             $ref: '#/definitions/ApiError'
+  /discourseSSO/getUserDetailForSSO:
+    get:
+      description: get the payload required for discourse sso
+      operationId: getUserDetailForSSO
+      parameters:
+        - in: query
+          name: sso
+          required: true
+          type: string
+        - in: query
+          name: sig
+          required: true
+          type: string
+      responses:
+        200:
+          description: Required payload for discourse sso
+          schema:
+            $ref: '#/definitions/DiscourseSSOResponse'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
 securityDefinitions:
   firebase:
     authorizationUrl: ""
@@ -2068,3 +2090,13 @@ definitions:
     properties:
       email:
         type: string
+  DiscourseSSOResponse:
+    type: object
+      required:
+        - sso
+        - sig
+      properties:
+        sso:
+          type: string
+        sig:
+          type: string
