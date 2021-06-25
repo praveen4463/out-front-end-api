@@ -2092,11 +2092,11 @@ definitions:
         type: string
   DiscourseSSOResponse:
     type: object
-      required:
-        - sso
-        - sig
-      properties:
-        sso:
-          type: string
-        sig:
-          type: string
+    required:
+      - sso
+      - sig
+    properties:
+      sso:
+        type: string
+      sig:
+        type: string
