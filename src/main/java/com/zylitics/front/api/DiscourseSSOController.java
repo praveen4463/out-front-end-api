@@ -1,6 +1,7 @@
 package com.zylitics.front.api;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.zylitics.front.SecretsManager;
@@ -56,9 +57,13 @@ public class DiscourseSSOController extends AbstractController {
     // Decode Base64 of payload to get the raw payload.
     String incomingPayload =
         new String(Base64.getDecoder().decode(ssoUrlDecoded), StandardCharsets.UTF_8);
+    int nonceTextLength = "nonce=".length();
+    String nonce = incomingPayload.substring(incomingPayload.indexOf("nonce=") + nonceTextLength,
+        incomingPayload.indexOf("&"));
     // create entire payload we'd send to discourse. url encode all the values
-    String outgoingPayload = String.format("%s&name=%s&email=%s&external_id=%s",
-        getUrlEncoded(incomingPayload),
+    Preconditions.checkArgument(!Strings.isNullOrEmpty(nonce), "nonce can't be empty");
+    String outgoingPayload = String.format("nonce=%s&name=%s&email=%s&external_id=%s",
+        getUrlEncoded(nonce),
         getUrlEncoded(Common.getUserDisplayName(user.getFirstName(), user.getLastName())),
         getUrlEncoded(user.getEmail()),
         userId);

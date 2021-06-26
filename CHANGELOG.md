@@ -43,3 +43,11 @@ Minor enhancements
 
 1. Added discourse sso support.
 2. Upgraded `zwl` to 0.4.3.
+
+## v0.3.8
+
+Bug fixes
+
+### Bug fixes
+
+1. Fixed a bug in discourse sso
