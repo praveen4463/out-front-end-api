@@ -2,19 +2,17 @@
 # !! Take care before an update is sent, read here how updates work
 #    https://kubernetes.io/docs/tasks/manage-kubernetes-objects/declarative-config/
 # Recommended labels: https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/
-# !! Make sure the node pool has required network tags to connect on internal IP of other services
-# such as runner (which requires runner-client tag)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: zl-front-deployment
   labels: &LABELS # will be assigned to deployment object
     app.kubernetes.io/name: &APP zl-front
-    app.kubernetes.io/version: &VERSION 0.3.8
+    app.kubernetes.io/version: &VERSION 0.3.9
     environment: &ENVIRONMENT production
 # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#deploymentspec-v1-apps
 spec:
-  replicas: 1
+  replicas: 3
   revisionHistoryLimit: 3
   selector:
     # Only pods matching this set of labels will be selected for this deployment. This helps during
@@ -50,7 +48,7 @@ spec:
           ports:
             - containerPort: 4000
         - name: *APP
-          image: us.gcr.io/zl-infra-main/zl-front:0.3.8
+          image: us.gcr.io/zl-infra-main/zl-front:0.3.9
           imagePullPolicy: IfNotPresent
           volumeMounts:
             - mountPath: /etc/sa-keys

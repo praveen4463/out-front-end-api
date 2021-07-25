@@ -159,15 +159,6 @@ public class BuildController extends AbstractController {
               " If you're starting several builds together, please slow down and wait for few" +
               " moments in between build runs");
     }
-    if (buildSourceType == BuildSourceType.IDE) {
-      if (buildRequests.stream()
-          .filter(br -> br.getBuildSourceType() == BuildSourceType.IDE).count() > 1) {
-        throw new HttpRequestException(HttpStatus.TOO_MANY_REQUESTS,
-            "You can start/run just one build from" +
-                " IDE at a time. If a build is currently running, wait until all tests have" +
-                " been processed");
-      }
-    }
     if (usersPlan.getPlanType() == PlanType.FREE &&
         usersPlan.getTotalMinutes() - usersPlan.getConsumedMinutes() < 1) {
       throw new HttpRequestException(HttpStatus.FORBIDDEN,

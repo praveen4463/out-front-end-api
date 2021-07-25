@@ -748,10 +748,13 @@ public class APICoreProperties {
   public static class Email {
     
     @NotBlank
-    private String issueReportReceiver;
+    private String supportEmail;
   
     @NotBlank
     private String appInternalEmailSender;
+  
+    @NotBlank
+    private String externalEmailSenderName;
   
     @NotBlank
     private String noReplyEmailSender;
@@ -776,6 +779,9 @@ public class APICoreProperties {
   
     @NotBlank
     private String emailVerifyTmpId;
+  
+    @NotBlank
+    private String verifyEmailPage;
     
     @NotBlank
     private String finishSignupPage;
@@ -795,13 +801,13 @@ public class APICoreProperties {
     @Min(1)
     private Integer notificationEmailGroupId;
   
-    public String getIssueReportReceiver() {
-      return issueReportReceiver;
+    public String getSupportEmail() {
+      return supportEmail;
     }
   
-    public void setIssueReportReceiver(String issueReportReceiver) {
-      if (this.issueReportReceiver == null) {
-        this.issueReportReceiver = issueReportReceiver;
+    public void setSupportEmail(String supportEmail) {
+      if (this.supportEmail == null) {
+        this.supportEmail = supportEmail;
       }
     }
   
@@ -812,6 +818,16 @@ public class APICoreProperties {
     public void setAppInternalEmailSender(String appInternalEmailSender) {
       if (this.appInternalEmailSender == null) {
         this.appInternalEmailSender = appInternalEmailSender;
+      }
+    }
+  
+    public String getExternalEmailSenderName() {
+      return externalEmailSenderName;
+    }
+  
+    public void setExternalEmailSenderName(String externalEmailSenderName) {
+      if (this.externalEmailSenderName == null) {
+        this.externalEmailSenderName = externalEmailSenderName;
       }
     }
   
@@ -891,6 +907,16 @@ public class APICoreProperties {
     public void setEmailVerifyTmpId(String emailVerifyTmpId) {
       if (this.emailVerifyTmpId == null) {
         this.emailVerifyTmpId = emailVerifyTmpId;
+      }
+    }
+  
+    public String getVerifyEmailPage() {
+      return verifyEmailPage;
+    }
+  
+    public void setVerifyEmailPage(String verifyEmailPage) {
+      if (this.verifyEmailPage == null) {
+        this.verifyEmailPage = verifyEmailPage;
       }
     }
   

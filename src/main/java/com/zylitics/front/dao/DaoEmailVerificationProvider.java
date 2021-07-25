@@ -22,20 +22,20 @@ public class DaoEmailVerificationProvider extends AbstractDaoProvider
   }
   
   @Override
-  public void newEmailVerification(NewEmailVerification newEmailVerification) {
-    String sql = "INSERT INTO email_verification (email, code, email_verification_user_type,\n" +
-        "role, organization_id, create_date)\n" +
-        "VALUES (:email, :code, :email_verification_user_type, :role, :organization_id,\n" +
-        ":create_date)";
-    int result = jdbc.update(sql, new SqlParamsBuilder()
+  public long newEmailVerification(NewEmailVerification newEmailVerification) {
+    String sql = "INSERT INTO email_verification (email, code, used,\n" +
+        "email_verification_user_type, role, organization_id, create_date)\n" +
+        "VALUES (:email, :code, :used, :email_verification_user_type, :role, :organization_id,\n" +
+        ":create_date) RETURNING email_verification_id";
+    return jdbc.query(sql, new SqlParamsBuilder()
         .withOther("email", newEmailVerification.getEmail())
         .withVarchar("code", newEmailVerification.getCode())
+        .withBoolean("used", newEmailVerification.isUsed())
         .withOther("email_verification_user_type",
             newEmailVerification.getEmailVerificationUserType())
         .withOther("role", newEmailVerification.getRole())
         .withInteger("organization_id", newEmailVerification.getOrganizationId())
-        .withCreateDate().build());
-    CommonUtil.validateSingleRowDbCommit(result);
+        .withCreateDate().build(), CommonUtil.getSingleInt()).get(0);
   }
   
   @Override

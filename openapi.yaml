@@ -10,7 +10,7 @@ info:
   title: Zylitics front end api
   # This version no. is just to showing in the console and has no affect on functionality, although it should be
   # updated whenever production version is updated.
-  version: 0.3.8
+  version: 0.3.9
 host: front.api.zylitics.io
 x-google-endpoints:
   - name: front.api.zylitics.io
@@ -217,23 +217,6 @@ paths:
           description: Unexpected exception
           schema:
             $ref: '#/definitions/ApiError'
-  /emailVerifications:
-    post:
-      description: Sends email verification email
-      operationId: sendEmailVerification
-      parameters:
-        - in: body
-          name: emailVerificationRequest
-          required: true
-          schema:
-            $ref: '#/definitions/EmailVerificationRequest'
-      responses:
-        200:
-          description: OK
-        default:
-          description: Unexpected exception
-          schema:
-            $ref: '#/definitions/ApiError'
   /emailVerifications/{code}/validate:
     patch:
       description: Validate email verification request
@@ -243,8 +226,6 @@ paths:
       responses:
         200:
           description: OK
-          schema:
-            $ref: '#/definitions/ValidateEmailVerificationResponse'
         default:
           description: Unexpected exception
           schema:
@@ -1270,9 +1251,9 @@ paths:
             $ref: '#/definitions/NewUserRequest'
       responses:
         200:
-          description: new User
+          description: NewUserResponse with User and customToken
           schema:
-            $ref: '#/definitions/User'
+            $ref: '#/definitions/NewUserResponse'
         default:
           description: Unexpected exception
           schema:
@@ -1441,19 +1422,6 @@ definitions:
         format: int64
       email:
         type: string
-  ValidateEmailVerificationResponse:
-    type: object
-    properties:
-      emailVerificationId:
-        type: integer
-        format: int64
-      email:
-        type: string
-      emailVerificationUserType:
-        type: string
-        enum: [NORMAL, IN_ORGANIZATION, BETA_INVITEE]
-      organizationName:
-        type: string
   EmailVerificationRequest:
     type: object
     properties:
@@ -1567,6 +1535,13 @@ definitions:
         $ref: '#/definitions/Organization'
       usersPlan:
         $ref: '#/definitions/UsersPlan'
+  NewUserResponse:
+    type: object
+    properties:
+      user:
+        $ref: '#/definitions/User'
+      customToken:
+        type: string
   UserUpdatableProfile:
     type: object
     properties:

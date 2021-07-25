@@ -73,7 +73,8 @@ public class EmailChangeController extends AbstractController {
     // once successfully done, send an email
     APICoreProperties.Email emailProps = apiCoreProperties.getEmail();
     EmailInfo emailInfo = new EmailInfo()
-        .setFrom(emailProps.getNoReplyEmailSender())
+        .setFromName(emailProps.getExternalEmailSenderName())
+        .setFrom(emailProps.getSupportEmail())
         .setTo(newEmail);
     String ctaLink = String.format("%s/%s",
         apiCoreProperties.getFrontEndBaseUrl() + emailProps.getEmailChangePage(), code);

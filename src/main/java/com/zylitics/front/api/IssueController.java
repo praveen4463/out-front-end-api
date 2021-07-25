@@ -57,7 +57,7 @@ public class IssueController extends AbstractController {
     APICoreProperties.Email emailProps = apiCoreProperties.getEmail();
     emailService.sendAsync(new PlainTextEmail()
         .setFrom(emailProps.getAppInternalEmailSender())
-        .setTo(emailProps.getIssueReportReceiver())
+        .setTo(emailProps.getSupportEmail())
         .setSubject("Issue report sent by user: " + userId)
         .setContent(sendIssueRequest.getDesc() +
             "\nAttached file (if any): " + sendIssueRequest.getFileName()), null, null);

@@ -3,5 +3,7 @@ package com.zylitics.front.model;
 public enum PlanName {
   
   BETA_TEST,
-  FREE_TRIAL
+  FREE_TRIAL,
+  ADMIN,
+  FREE
 }

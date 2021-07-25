@@ -37,7 +37,7 @@ public class InvitationRequestController extends AbstractController {
     String userEmail = newInvitationRequest.getEmail();
     emailService.sendAsync(new PlainTextEmail()
         .setFrom(emailProps.getAppInternalEmailSender())
-        .setTo(emailProps.getIssueReportReceiver())
+        .setTo(emailProps.getSupportEmail())
         .setSubject("New beta testing invitation request")
         .setContent(userEmail),
         null,

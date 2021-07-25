@@ -66,8 +66,9 @@ api-core:
     sendgrid-api-key-secret-cloud-file: sendgrid-primary-mail-sender.encrypted
     discourse-sso-secret-cloud-file: discource-sso.encrypt
   email:
-    issue-report-receiver: support@zylitics.io
+    support-email: support@zylitics.io
     app-internal-email-sender: internal@zylitics.io
+    external-email-sender-name: The Zylitics Team
     no-reply-email-sender: noreply@zylitics.io
     email-beta-invite-tmp-id: d-283d2eb137f5409f8e8cc1337429319e
     email-team-invite-tmp-id: d-d836d47b1a4a460f978ff27d0dcdea71
@@ -76,6 +77,7 @@ api-core:
     email-change-tmp-id: d-9e208f6fe5ba4ab69d181cb3c3714d4b
     email-pwd-reset-tmp-id: d-d2787d44dd2742879c19dafc4cf10977
     email-verify-tmp-id: d-5cc358a3cc0d4b3faf9d1f487064ef47
+    verify-email-page: /verify-email
     finish-signup-page: /finish-signup
     pwd-reset-page: /reset-pwd
     email-change-page: /change-email

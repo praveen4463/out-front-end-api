@@ -7,7 +7,7 @@ import java.util.Optional;
 
 public interface EmailVerificationProvider {
 
-  void newEmailVerification(NewEmailVerification newEmailVerification);
+  long newEmailVerification(NewEmailVerification newEmailVerification);
   
   Optional<EmailVerification> getEmailVerification(String code);
   

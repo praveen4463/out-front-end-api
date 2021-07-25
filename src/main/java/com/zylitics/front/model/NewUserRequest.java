@@ -3,7 +3,6 @@ package com.zylitics.front.model;
 import org.springframework.validation.annotation.Validated;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
@@ -18,6 +17,9 @@ public class NewUserRequest {
   private String lastName;
   
   @NotBlank
+  private String email;
+  
+  @Nullable
   @Size(min = 6)
   private String password;
   
@@ -27,11 +29,16 @@ public class NewUserRequest {
   @NotNull
   private Integer utcOffsetInMinutes;
   
-  @Min(1)
-  private long emailVerificationId;
+  @Nullable
+  private Long emailVerificationId;
   
   @Nullable
   private String organizationName;
+  
+  @Nullable
+  private PlanName planName;
+  
+  private boolean usingLoginProvider;
   
   public String getFirstName() {
     return firstName;
@@ -51,11 +58,21 @@ public class NewUserRequest {
     return this;
   }
   
+  public String getEmail() {
+    return email;
+  }
+  
+  public NewUserRequest setEmail(String email) {
+    this.email = email;
+    return this;
+  }
+  
+  @Nullable
   public String getPassword() {
     return password;
   }
   
-  public NewUserRequest setPassword(String password) {
+  public NewUserRequest setPassword(@Nullable String password) {
     this.password = password;
     return this;
   }
@@ -78,11 +95,12 @@ public class NewUserRequest {
     return this;
   }
   
-  public long getEmailVerificationId() {
+  @Nullable
+  public Long getEmailVerificationId() {
     return emailVerificationId;
   }
   
-  public NewUserRequest setEmailVerificationId(long emailVerificationId) {
+  public NewUserRequest setEmailVerificationId(@Nullable Long emailVerificationId) {
     this.emailVerificationId = emailVerificationId;
     return this;
   }
@@ -94,6 +112,25 @@ public class NewUserRequest {
   
   public NewUserRequest setOrganizationName(@Nullable String organizationName) {
     this.organizationName = organizationName;
+    return this;
+  }
+  
+  @Nullable
+  public PlanName getPlanName() {
+    return planName;
+  }
+  
+  public NewUserRequest setPlanName(@Nullable PlanName planName) {
+    this.planName = planName;
+    return this;
+  }
+  
+  public boolean isUsingLoginProvider() {
+    return usingLoginProvider;
+  }
+  
+  public NewUserRequest setUsingLoginProvider(boolean usingLoginProvider) {
+    this.usingLoginProvider = usingLoginProvider;
     return this;
   }
 }

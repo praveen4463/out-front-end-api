@@ -51,3 +51,16 @@ Bug fixes
 ### Bug fixes
 
 1. Fixed a bug in discourse sso
+
+## v0.3.9
+
+Enhancements
+
+### Enhancements
+
+1. Beta invitation is no longer supported.
+2. Supporting addition of new users without email confirmation.
+3. Changed transactions email sender to support email.
+4. Email sender name will have a name going forward.
+5. New users can be added using email/pwd or identity provider.
+6. Only one build from IDE at a time requirement no longer applies.

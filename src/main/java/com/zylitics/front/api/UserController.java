@@ -2,6 +2,7 @@ package com.zylitics.front.api;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableMap;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.UserRecord;
@@ -12,7 +13,6 @@ import com.zylitics.front.model.*;
 import com.zylitics.front.provider.*;
 import com.zylitics.front.services.EmailService;
 import com.zylitics.front.services.SendTemplatedEmail;
-import com.zylitics.front.util.DateTimeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -20,7 +20,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import javax.annotation.Nullable;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 @SuppressWarnings("unused")
 @RestController
@@ -51,69 +55,106 @@ public class UserController extends AbstractController {
     this.emailService = emailService;
   }
   
+  // All possible user types are:
+  // identity provider user, email-pwd user, team user email-pwd, team user identity provider
   @SuppressWarnings("unused")
-  /*
-  * Client must put restrictions on password length which should be atleast 6 characters
-  * */
   @PostMapping
   public ResponseEntity<?> newUser(
       @RequestBody @Validated NewUserRequest newUserRequest,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo) {
     assertAnonymousUser(userInfo);
-    Optional<EmailVerification> emailVerificationOptional =
-        emailVerificationProvider.getEmailVerification(newUserRequest.getEmailVerificationId());
-    if (!emailVerificationOptional.isPresent()) {
-      throw new IllegalArgumentException("Invalid emailVerificationId passed to newUser: " +
-          newUserRequest.getEmailVerificationId());
-    }
-    EmailVerification emailVerification = emailVerificationOptional.get();
-    // check whether email is in system, checked again here so that if some user sends
-    // themselves multiple signup email, completes one of them and later click on others, we reject
-    // them with proper error.
-    if (userProvider.userWithEmailExist(emailVerification.getEmail())) {
+    
+    // check whether email is in system
+    if (userProvider.userWithEmailExist(newUserRequest.getEmail())) {
       return sendError(HttpStatus.UNPROCESSABLE_ENTITY, "A user with this email already exists",
           EmailApiErrorCause.EMAIL_ALREADY_EXIST);
     }
-    String password = newUserRequest.getPassword().trim();
-    Preconditions.checkArgument(password.length() >= 6, "Password requirement not met");
+  
+    // if we've a password, check it's length. We may not have a password if signing using providers
+    String password = newUserRequest.getPassword();
+    if (!Strings.isNullOrEmpty(password)) {
+      Preconditions.checkArgument(password.length() >= 6, "Password requirement not met");
+    } else {
+      // if there is no password, validate that a provider is used.
+      Preconditions.checkArgument(newUserRequest.isUsingLoginProvider(), "Password can't be empty");
+    }
+    
+    // get all the things needed to create new user depending on type of user
+    long emailVerificationId;
+    Role role;
+    String newEmailVerificationCode = null;
+    @Nullable Integer organizationId = null;
+    // if this invocation doesn't have an email verification (regular signup), create a new one
+    if (newUserRequest.getEmailVerificationId() == null) {
+      role = Role.ADMIN;
+      // when a login provider is used, just create email verification record and mark is used means
+      // verified.
+      newEmailVerificationCode = UUID.randomUUID().toString();
+      emailVerificationId = emailVerificationProvider.newEmailVerification(
+          new NewEmailVerification(newUserRequest.getEmail(),
+              newEmailVerificationCode,
+              EmailVerificationUserType.NORMAL,
+              role,
+              newUserRequest.isUsingLoginProvider()));
+    } else {
+      // email verification is done upfront in team member invite only
+      emailVerificationId = newUserRequest.getEmailVerificationId();
+      Optional<EmailVerification> emailVerificationOptional =
+          emailVerificationProvider.getEmailVerification(emailVerificationId);
+      if (!emailVerificationOptional.isPresent()) {
+        throw new IllegalArgumentException("Invalid emailVerificationId passed to newUser: " +
+            newUserRequest.getEmailVerificationId());
+      }
+      EmailVerification emailVerification = emailVerificationOptional.get();
+      role = emailVerification.getRole();
+      // will be available in team invitec
+      organizationId = emailVerification.getOrganizationId();
+    }
+    
     String shotBucketSessionStorage =
         Common.getShotBucketPerOffset(newUserRequest.getUtcOffsetInMinutes(), apiCoreProperties);
-    String organizationName = newUserRequest.getOrganizationName();
     NewUser newUser;
-    if (emailVerification.getOrganizationId() != null) {
+    
+    if (organizationId != null) {
       newUser = new NewUserInOrganization(newUserRequest.getFirstName(),
-          newUserRequest.getLastName(), emailVerification.getEmail(), newUserRequest.getTimezone(),
-          emailVerification.getRole(), shotBucketSessionStorage,
-          newUserRequest.getEmailVerificationId(), emailVerification.getOrganizationId());
+          newUserRequest.getLastName(), newUserRequest.getEmail(), newUserRequest.getTimezone(),
+          role, shotBucketSessionStorage, emailVerificationId, organizationId);
     } else {
-      PlanName planName;
-      if (emailVerification.getEmailVerificationUserType() ==
-          EmailVerificationUserType.BETA_INVITEE) {
-        planName = PlanName.BETA_TEST;
-      } else {
-        planName = PlanName.FREE_TRIAL;
-      }
+      String organizationName = newUserRequest.getOrganizationName();
       if (Strings.isNullOrEmpty(organizationName)) {
         organizationName = newUserRequest.getFirstName() + "'s" + " Organization";
       }
+      Preconditions.checkArgument(newUserRequest.getPlanName() != null, "Plan can't be null");
       newUser = new NewUserNewOrganization(newUserRequest.getFirstName(),
-          newUserRequest.getLastName(), emailVerification.getEmail(), newUserRequest.getTimezone(),
-          Role.ADMIN, shotBucketSessionStorage, newUserRequest.getEmailVerificationId(), planName,
+          newUserRequest.getLastName(), newUserRequest.getEmail(), newUserRequest.getTimezone(),
+          role, shotBucketSessionStorage, emailVerificationId, newUserRequest.getPlanName(),
           organizationName);
     }
+    
     // put this new user
     User user = userProvider.newUser(newUser);
     int userId = user.getId();
+    String firebaseUid = Integer.toString(userId);
+    String customToken = null;
+    // send email verification after signup only for users that created using email/pwd
+    boolean sendEmailVerification = newUserRequest.getEmailVerificationId() == null
+        && !newUserRequest.isUsingLoginProvider();
     // put this new user in firebase using our own userId
     CreateRequest createRequest = new CreateRequest()
-        .setUid(Integer.toString(userId))
-        .setEmail(emailVerification.getEmail())
-        .setPassword(password)
+        .setUid(firebaseUid)
+        .setEmail(newUserRequest.getEmail())
         .setDisplayName(
             Common.getUserDisplayName(newUserRequest.getFirstName(), newUserRequest.getLastName()))
-        .setEmailVerified(true);
+        .setEmailVerified(!sendEmailVerification);
+    if (!Strings.isNullOrEmpty(password)) {
+      createRequest.setPassword(password);
+    }
     try {
       firebaseAuth.createUser(createRequest);
+      // if a login provider was used, create a custom token to login user
+      if (newUserRequest.isUsingLoginProvider()) {
+        customToken = firebaseAuth.createCustomToken(firebaseUid);
+      }
     } catch (FirebaseAuthException f) {
       LOG.error("Priority: Couldn't create user in firebase, userId: " + userId, f);
       return sendError(HttpStatus.INTERNAL_SERVER_ERROR, "There was an error signing you up." +
@@ -122,20 +163,33 @@ public class UserController extends AbstractController {
           " email once you account is ready to log in. Please allow us few hours time. You can" +
           " also contact us if you've questions.");
     }
-    // send new user welcome email asynchronously
+    
+    // send new user emails asynchronously
     APICoreProperties.Email emailProps = apiCoreProperties.getEmail();
     EmailInfo emailInfo = new EmailInfo()
-        .setFrom(emailProps.getNoReplyEmailSender())
-        .setTo(emailVerification.getEmail());
-    String templateId = emailVerification.getEmailVerificationUserType() ==
-        EmailVerificationUserType.BETA_INVITEE
-        ? emailProps.getEmailBetaWelcomeTmpId()
-        : emailProps.getEmailWelcomeTmpId();
-    SendTemplatedEmail sendTemplatedEmail = new SendTemplatedEmail(emailInfo, templateId, null,
-        emailProps.getNotificationEmailGroupId(), null);
+        .setFromName(emailProps.getExternalEmailSenderName())
+        .setFrom(emailProps.getSupportEmail())
+        .setTo(newUserRequest.getEmail());
+    // send verification email if needed
+    if (sendEmailVerification) {
+      Objects.requireNonNull(newEmailVerificationCode);
+      String ctaLink = String.format("%s/%s",
+          apiCoreProperties.getFrontEndBaseUrl() + emailProps.getVerifyEmailPage(),
+          newEmailVerificationCode);
+      Map<String, Object> templateData = ImmutableMap.of(emailProps.getCtaLinkTag(), ctaLink);
+      SendTemplatedEmail sendTemplatedEmail = new SendTemplatedEmail(emailInfo,
+          emailProps.getEmailVerifyTmpId(),
+          templateData);
+      emailService.sendAsync(sendTemplatedEmail, null,
+          (v) -> LOG.error("Priority: Couldn't send an email verification to userId: " + userId));
+    }
+    // send welcome email
+    SendTemplatedEmail sendTemplatedEmail = new SendTemplatedEmail(emailInfo,
+        emailProps.getEmailWelcomeTmpId());
     emailService.sendAsync(sendTemplatedEmail, null,
         (v) -> LOG.error("Priority: Couldn't send a welcome email to userId: " + userId));
-    return ResponseEntity.ok(user);
+    
+    return ResponseEntity.ok(new NewUserResponse().setUser(user).setCustomToken(customToken));
   }
   
   @GetMapping("/current")
@@ -182,5 +236,32 @@ public class UserController extends AbstractController {
       }
     }
     return ResponseEntity.ok().build();
+  }
+  
+  static class NewUserResponse {
+    
+    private User user;
+    
+    @Nullable
+    private String customToken;
+  
+    public User getUser() {
+      return user;
+    }
+  
+    public NewUserResponse setUser(User user) {
+      this.user = user;
+      return this;
+    }
+  
+    @Nullable
+    public String getCustomToken() {
+      return customToken;
+    }
+  
+    public NewUserResponse setCustomToken(@Nullable String customToken) {
+      this.customToken = customToken;
+      return this;
+    }
   }
 }
