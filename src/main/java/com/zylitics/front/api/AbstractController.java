@@ -26,7 +26,7 @@ public abstract class AbstractController {
   
   static final String USER_INFO_REQ_HEADER = "X-Endpoint-API-UserInfo";
   
-  private UserFromProxy getUserFromProxy(String userInfoHeaderValue) {
+  UserFromProxy getUserFromProxy(String userInfoHeaderValue) {
     byte[] decoded = Base64.getUrlDecoder().decode(userInfoHeaderValue);
     ObjectMapper mapper = new ObjectMapper();
     mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);

@@ -7,6 +7,7 @@ import com.zylitics.front.model.*;
 import com.zylitics.front.provider.EmailVerificationProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,13 +34,18 @@ public class EmailVerificationController extends AbstractController {
   public ResponseEntity<?> validate(
       @PathVariable @NotBlank String code,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo) {
-    int userId = getUserId(userInfo);
+    UserFromProxy user = getUserFromProxy(userInfo);
+    int userId = Integer.parseInt(user.getId());
     Optional<EmailVerification> emailVerificationOptional =
         emailVerificationProvider.getEmailVerification(code);
     if (!emailVerificationOptional.isPresent()) {
       throw new IllegalArgumentException("Can't identify verification link, the code is invalid");
     }
     EmailVerification emailVerification = emailVerificationOptional.get();
+    if (!emailVerification.getEmail().equals(user.getEmail())) {
+      return sendError(HttpStatus.UNPROCESSABLE_ENTITY,
+          "This email verification link is not intended for current user");
+    }
     if (emailVerification.isUsed()) {
       return ResponseEntity.ok().build();
     }

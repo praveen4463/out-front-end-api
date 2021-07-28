@@ -64,3 +64,13 @@ Enhancements
 4. Email sender name will have a name going forward.
 5. New users can be added using email/pwd or identity provider.
 6. Only one build from IDE at a time requirement no longer applies.
+
+## v0.3.10
+
+Enhancements
+
+### Enhancements
+
+1. Upgraded `zwl` to 0.4.5.
+2. Email verification is now checking whether current user own verification email.
+3. New user checks that team member creates account with same email.

@@ -10,7 +10,7 @@ info:
   title: Zylitics front end api
   # This version no. is just to showing in the console and has no affect on functionality, although it should be
   # updated whenever production version is updated.
-  version: 0.3.9
+  version: 0.3.10
 host: front.api.zylitics.io
 x-google-endpoints:
   - name: front.api.zylitics.io

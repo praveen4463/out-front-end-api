@@ -106,8 +106,10 @@ public class UserController extends AbstractController {
             newUserRequest.getEmailVerificationId());
       }
       EmailVerification emailVerification = emailVerificationOptional.get();
+      Preconditions.checkArgument(newUserRequest.getEmail().equals(emailVerification.getEmail()),
+          "Team member can only be created with the same email they were invited on.");
       role = emailVerification.getRole();
-      // will be available in team invitec
+      // will be available in team invitation
       organizationId = emailVerification.getOrganizationId();
     }
     
