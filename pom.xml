@@ -7,16 +7,16 @@
   <artifactId>zl-front</artifactId>
   <!-- Note: !!! This version is used in these places, kubernetes deployment files, image names in deployment files,
         openapi specification. Once updated, change all those places too. !!! -->
-  <version>0.3.10</version>
+  <version>0.3.11</version>
   <name>zl-front</name>
   <url>http://maven.apache.org</url>
   <properties>
     <elasticsearch.version>7.10.0</elasticsearch.version>
     <google-cloud-kms.version>1.41.1</google-cloud-kms.version>
     <google-cloud-storage.version>1.113.14</google-cloud-storage.version>
-    <jib-maven-plugin.version>3.1.1</jib-maven-plugin.version>
+    <jib-maven-plugin.version>3.1.2</jib-maven-plugin.version>
     <stackdriver-logback.version>0.120.4-alpha</stackdriver-logback.version>
-    <zwl.version>0.4.5</zwl.version>
+    <zwl.version>0.6.0</zwl.version>
     <sendgrid.version>4.7.1</sendgrid.version>
     <firebase-admin.version>7.1.0</firebase-admin.version>
 

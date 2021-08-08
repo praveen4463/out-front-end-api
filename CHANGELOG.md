@@ -74,3 +74,11 @@ Enhancements
 1. Upgraded `zwl` to 0.4.5.
 2. Email verification is now checking whether current user own verification email.
 3. New user checks that team member creates account with same email.
+
+## v0.3.11
+
+Enhancements
+
+### Enhancements
+
+1. Upgraded `zwl` to 0.6.0.
