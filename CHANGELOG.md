@@ -82,3 +82,11 @@ Enhancements
 ### Enhancements
 
 1. Upgraded `zwl` to 0.6.0.
+
+## v0.3.12
+
+Enhancements
+
+### Enhancements
+
+1. Added more plans to `PlanEnum`.

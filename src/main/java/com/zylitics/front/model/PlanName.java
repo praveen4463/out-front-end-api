@@ -5,5 +5,13 @@ public enum PlanName {
   BETA_TEST,
   FREE_TRIAL,
   ADMIN,
-  FREE
+  FREE,
+  STARTUP_TRIAL,
+  SB_TRIAL,
+  BUSINESS_TRIAL,
+  COMPANY_TRIAL,
+  STARTUP,
+  SB,
+  BUSINESS,
+  COMPANY
 }
