@@ -11,7 +11,8 @@ public interface FileProvider {
   
   List<FileIdentifier> getFilesIdentifier(int projectId, int userId);
   
-  List<File> getFilesWithTests(List<Integer> fileIdsFilter,
+  List<File> getFilesWithTests(int projectId,
+                               List<Integer> fileIdsFilter,
                                boolean excludeCode,
                                boolean excludeNoCodeTests,
                                int useId);

@@ -68,7 +68,8 @@ public class DaoFileProvider extends AbstractDaoProvider implements FileProvider
   // allowed, spring says it's 100. Best is to have a table created using unnest passed with array
   // of parameters to IN clause.
   @Override
-  public List<File> getFilesWithTests(List<Integer> fileIdsFilter,
+  public List<File> getFilesWithTests(int projectId,
+                                      List<Integer> fileIdsFilter,
                                       boolean excludeCode,
                                       boolean excludeNoCodeTests,
                                       int userId) {
@@ -81,14 +82,14 @@ public class DaoFileProvider extends AbstractDaoProvider implements FileProvider
     ListMultimap<Integer, TestVersion> testIdToVersions =
         MultimapBuilder.hashKeys().arrayListValues().build();
   
-    SqlParamsBuilder fileParamsBuilder = new SqlParamsBuilder(userId);
+    SqlParamsBuilder fileParamsBuilder = new SqlParamsBuilder(projectId, userId);
     
     // Following query will verify that user is authorized to these files and filters files that
     // have tests.
     StringBuilder sqlFile = new StringBuilder("SELECT f.bt_file_id, f.name FROM bt_file AS f\n" +
         "INNER JOIN bt_project AS p ON (f.bt_project_id = p.bt_project_id)\n" +
         "INNER JOIN bt_test AS t ON (f.bt_file_id = t.bt_file_id)\n" +
-        "WHERE p.zluser_id = :zluser_id\n");
+        "WHERE p.zluser_id = :zluser_id AND p.bt_project_id = :bt_project_id\n");
     
     if (filterFiles) {
       sqlFile.append("AND f.bt_file_id IN (select * from unnest(:file_ids));");

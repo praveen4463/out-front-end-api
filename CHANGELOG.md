@@ -90,3 +90,11 @@ Enhancements
 ### Enhancements
 
 1. Added more plans to `PlanEnum`.
+
+## v0.3.13
+
+Bug fixes
+
+### Bug fixes
+
+1. All files were loading, not taking into account the selected project.

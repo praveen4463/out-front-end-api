@@ -43,6 +43,7 @@ public class FileController extends AbstractController {
   
   @GetMapping("/getWithTests")
   public ResponseEntity<List<File>> getFilesWithTests(
+      @PathVariable @Min(1) int projectId,
       @RequestParam(required = false) String fileIdsFilter,
       @RequestParam(required = false) boolean excludeCode,
       @RequestParam(required = false) boolean excludeNoCodeTests,
@@ -50,6 +51,7 @@ public class FileController extends AbstractController {
   ) {
     List<Integer> fIds = CommonUtil.commaDelToNumericList(fileIdsFilter);
     return ResponseEntity.ok(fileProvider.getFilesWithTests(
+        projectId,
         fIds,
         excludeCode,
         excludeNoCodeTests,
