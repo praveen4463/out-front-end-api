@@ -98,3 +98,11 @@ Bug fixes
 ### Bug fixes
 
 1. All files were loading, not taking into account the selected project.
+
+## v0.3.13
+
+Enhancements
+
+### Enhancements
+
+1. Added outomated domains as allowed clients
