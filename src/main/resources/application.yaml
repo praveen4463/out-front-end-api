@@ -66,10 +66,10 @@ api-core:
     sendgrid-api-key-secret-cloud-file: sendgrid-primary-mail-sender.encrypted
     discourse-sso-secret-cloud-file: discource-sso.encrypt
   email:
-    support-email: support@zylitics.io
-    app-internal-email-sender: internal@zylitics.io
-    external-email-sender-name: The Zylitics Team
-    no-reply-email-sender: noreply@zylitics.io
+    support-email: support@outomated.com
+    app-internal-email-sender: internal@outomated.com
+    external-email-sender-name: The Outomated Team
+    no-reply-email-sender: noreply@outomated.com
     email-beta-invite-tmp-id: d-283d2eb137f5409f8e8cc1337429319e
     email-team-invite-tmp-id: d-d836d47b1a4a460f978ff27d0dcdea71
     email-beta-welcome-tmp-id: d-4315d05c14b740ab9678da7273c109ec

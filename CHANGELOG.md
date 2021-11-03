@@ -99,10 +99,18 @@ Bug fixes
 
 1. All files were loading, not taking into account the selected project.
 
-## v0.3.13
+## v0.3.14
 
 Enhancements
 
 ### Enhancements
 
 1. Added outomated domains as allowed clients
+
+## v0.3.15
+
+Enhancements
+
+### Enhancements
+
+1. Changed emails to outomated
