@@ -114,3 +114,11 @@ Enhancements
 ### Enhancements
 
 1. Changed emails to outomated
+
+## v0.3.16
+
+Enhancements
+
+### Enhancements
+
+1. Added new plans
