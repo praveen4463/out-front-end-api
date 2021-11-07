@@ -2,7 +2,7 @@
 api-core:
   project-id: zl-infra-main
   kms-project-id: zl-win-nodes
-  front-end-base-url: https://outomated.com
+  front-end-base-url: https://app.outomated.com
   cloud-kms:
     key-ring: zl-apps-auth-secret
     key: default-prod

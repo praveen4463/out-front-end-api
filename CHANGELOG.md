@@ -122,3 +122,11 @@ Enhancements
 ### Enhancements
 
 1. Added new plans
+
+## v0.3.17
+
+Bug fixes
+
+### Bug fixes
+
+1. Fixing front end url
