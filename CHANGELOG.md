@@ -130,3 +130,11 @@ Bug fixes
 ### Bug fixes
 
 1. Fixing front end url
+
+## v0.3.18
+
+Bug fixes
+
+### Bug fixes
+
+1. Fixed a bug in nginx to allow bigger file uploads

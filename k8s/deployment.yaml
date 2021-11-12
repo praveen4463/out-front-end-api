@@ -8,7 +8,7 @@ metadata:
   name: zl-front-deployment
   labels: &LABELS # will be assigned to deployment object
     app.kubernetes.io/name: &APP zl-front
-    app.kubernetes.io/version: &VERSION 0.3.17
+    app.kubernetes.io/version: &VERSION 0.3.18
     environment: &ENVIRONMENT production
 # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#deploymentspec-v1-apps
 spec:
@@ -43,12 +43,12 @@ spec:
               "--service=front.api.zylitics.io",
               "--rollout_strategy=managed",
               "--cors_preset=cors_with_regex",
-              "--cors_allow_origin_regex=^https://(?:zylitics\\.io|docs.zylitics\\.io|about.zylitics\\.io|app.outomated\\.com|outomated\\.com|docs.outomated\\.com)$",
+              "--cors_allow_origin_regex=^https://(?:app.outomated\\.com|outomated\\.com|docs.outomated\\.com)$",
           ]
           ports:
             - containerPort: 4000
         - name: *APP
-          image: us.gcr.io/zl-infra-main/zl-front:0.3.17
+          image: us.gcr.io/zl-infra-main/zl-front:0.3.18
           imagePullPolicy: IfNotPresent
           volumeMounts:
             - mountPath: /etc/sa-keys
@@ -120,6 +120,7 @@ metadata:
     # connection will be closed.
     nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/client_max_body_size: "100M"
     # !! don't use in production, allows http access.
     # https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#server-side-https-enforcement-through-redirect
     # https://github.com/kubernetes/ingress-nginx/issues/1567
