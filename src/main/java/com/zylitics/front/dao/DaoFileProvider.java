@@ -72,6 +72,7 @@ public class DaoFileProvider extends AbstractDaoProvider implements FileProvider
                                       List<Integer> fileIdsFilter,
                                       boolean excludeCode,
                                       boolean excludeNoCodeTests,
+                                      boolean includeNoTestFiles,
                                       int userId) {
     boolean filterFiles = fileIdsFilter.size() > 0;
     // contains only files that have tests
@@ -88,7 +89,8 @@ public class DaoFileProvider extends AbstractDaoProvider implements FileProvider
     // have tests.
     StringBuilder sqlFile = new StringBuilder("SELECT f.bt_file_id, f.name FROM bt_file AS f\n" +
         "INNER JOIN bt_project AS p ON (f.bt_project_id = p.bt_project_id)\n" +
-        "INNER JOIN bt_test AS t ON (f.bt_file_id = t.bt_file_id)\n" +
+        (includeNoTestFiles ? "LEFT" : "INNER") +
+        " JOIN bt_test AS t ON (f.bt_file_id = t.bt_file_id)\n" +
         "WHERE p.zluser_id = :zluser_id AND p.bt_project_id = :bt_project_id\n");
     
     if (filterFiles) {

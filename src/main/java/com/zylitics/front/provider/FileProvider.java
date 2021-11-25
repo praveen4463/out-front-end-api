@@ -15,6 +15,7 @@ public interface FileProvider {
                                List<Integer> fileIdsFilter,
                                boolean excludeCode,
                                boolean excludeNoCodeTests,
+                               boolean includeNoTestFiles,
                                int useId);
   
   void renameFile(File file, int projectId, int userId);

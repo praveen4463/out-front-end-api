@@ -47,6 +47,7 @@ public class FileController extends AbstractController {
       @RequestParam(required = false) String fileIdsFilter,
       @RequestParam(required = false) boolean excludeCode,
       @RequestParam(required = false) boolean excludeNoCodeTests,
+      @RequestParam(required = false) boolean includeNoTestFiles,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
   ) {
     List<Integer> fIds = CommonUtil.commaDelToNumericList(fileIdsFilter);
@@ -55,6 +56,7 @@ public class FileController extends AbstractController {
         fIds,
         excludeCode,
         excludeNoCodeTests,
+        includeNoTestFiles,
         getUserId(userInfo)));
   }
   

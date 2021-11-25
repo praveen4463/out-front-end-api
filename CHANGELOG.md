@@ -138,3 +138,11 @@ Bug fixes
 ### Bug fixes
 
 1. Fixed a bug in nginx to allow bigger file uploads
+
+## v0.3.19
+
+Bug fixes
+
+### Bug fixes
+
+1. Fixed a bug in fileWithTests to allow files having no tests.  
