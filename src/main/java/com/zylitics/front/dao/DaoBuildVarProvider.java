@@ -3,6 +3,7 @@ package com.zylitics.front.dao;
 import com.google.common.base.Preconditions;
 import com.zylitics.front.model.BuildVar;
 import com.zylitics.front.model.CapturedVariable;
+import com.zylitics.front.model.User;
 import com.zylitics.front.provider.BuildVarProvider;
 import com.zylitics.front.util.CommonUtil;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -117,15 +118,19 @@ public class DaoBuildVarProvider extends AbstractDaoProvider implements BuildVar
   
   @Override
   public List<BuildVar> getBuildVars(int projectId, int userId, boolean onlyPrimary) {
+    User user = common.getUserOwnProps(userId);
     StringBuilder sql = new StringBuilder("SELECT\n" +
         "b.zwl_build_variables_id, b.key, b.value, b.isPrimary FROM zwl_build_variables AS b\n" +
         "INNER JOIN bt_project AS p ON (b.bt_project_id = p.bt_project_id)\n" +
-        "WHERE b.bt_project_id = :bt_project_id AND p.zluser_id = :zluser_id");
+        "WHERE b.bt_project_id = :bt_project_id AND p.organization_id = :organization_id");
     if (onlyPrimary) {
       sql.append("\nAND b.isPrimary = true");
     }
     
-    SqlParameterSource namedParams = new SqlParamsBuilder(projectId, userId).build();
+    SqlParameterSource namedParams = new SqlParamsBuilder()
+        .withProject(projectId)
+        .withOrganization(user.getOrganizationId())
+        .build();
     
     return jdbc.query(sql.toString(), namedParams, (rs, rowNum) -> new BuildVar()
         .setId(rs.getInt("zwl_build_variables_id"))
@@ -138,18 +143,21 @@ public class DaoBuildVarProvider extends AbstractDaoProvider implements BuildVar
   public List<BuildVar> getPrimaryBuildVarsOverridingGiven(int projectId, int userId,
                                                            Map<String, Integer> overrideKeyId) {
     Preconditions.checkArgument(overrideKeyId.size() > 0, "overrideKeyId is empty");
+    User user = common.getUserOwnProps(userId);
     String sql = "SELECT\n" +
         "b.zwl_build_variables_id, b.key, b.value, b.isPrimary FROM zwl_build_variables AS b\n" +
         "INNER JOIN bt_project AS p ON (b.bt_project_id = p.bt_project_id)\n" +
-        "WHERE b.bt_project_id = :bt_project_id AND p.zluser_id = :zluser_id\n" +
+        "WHERE b.bt_project_id = :bt_project_id AND p.organization_id = :organization_id\n" +
         "AND b.isPrimary = true AND b.key NOT IN (SELECT * FROM unnest(:overrideKeys))\n" +
         "UNION ALL\n" +
         "SELECT\n" +
         "b.zwl_build_variables_id, b.key, b.value, b.isPrimary FROM zwl_build_variables AS b\n" +
         "INNER JOIN bt_project AS p ON (b.bt_project_id = p.bt_project_id)\n" +
-        "WHERE p.zluser_id = :zluser_id\n" +
+        "WHERE p.organization_id = :organization_id\n" +
         "AND zwl_build_variables_id IN (SELECT * FROM unnest(:overrideIds))";
-    SqlParameterSource namedParams = new SqlParamsBuilder(projectId, userId)
+    SqlParameterSource namedParams = new SqlParamsBuilder()
+        .withProject(projectId)
+        .withOrganization(user.getOrganizationId())
         .withArray("overrideKeys", overrideKeyId.keySet().toArray(), JDBCType.VARCHAR)
         .withArray("overrideIds", overrideKeyId.values().toArray(), JDBCType.INTEGER).build();
     return jdbc.query(sql, namedParams, (rs, rowNum) -> new BuildVar()
@@ -196,12 +204,14 @@ public class DaoBuildVarProvider extends AbstractDaoProvider implements BuildVar
   @Override
   public void updateBuildVar(String columnId, String value, int buildVarId, int projectId,
                             int userId) {
+    User user = common.getUserOwnProps(userId);
     if (columnId.equals("value")) {
       String sql = "UPDATE zwl_build_variables AS b SET value = :value\n" +
           "FROM bt_project p\n" +
           "WHERE zwl_build_variables_id = :zwl_build_variables_id\n" +
-          "AND b.bt_project_id = p.bt_project_id AND p.zluser_id = :zluser_id;";
-      int result = jdbc.update(sql, new SqlParamsBuilder(userId)
+          "AND b.bt_project_id = p.bt_project_id AND p.organization_id = :organization_id;";
+      int result = jdbc.update(sql, new SqlParamsBuilder()
+          .withOrganization(user.getOrganizationId())
           .withOther("value", value)
           .withInteger("zwl_build_variables_id", buildVarId).build());
       CommonUtil.validateSingleRowDbCommit(result);
@@ -240,6 +250,7 @@ public class DaoBuildVarProvider extends AbstractDaoProvider implements BuildVar
   
   @Override
   public void deleteBuildVar(int buildVarId, boolean isPrimary, int projectId, int userId) {
+    User user = common.getUserOwnProps(userId);
     if (isPrimary) {
       String sql = "SELECT count(*) FROM zwl_build_variables\n" +
           "WHERE key = (SELECT key from zwl_build_variables WHERE\n" +
@@ -257,19 +268,23 @@ public class DaoBuildVarProvider extends AbstractDaoProvider implements BuildVar
     String sql = "DELETE FROM zwl_build_variables b\n" +
         "USING bt_project p\n" +
         "WHERE zwl_build_variables_id = :zwl_build_variables_id\n" +
-        "AND b.bt_project_id = p.bt_project_id AND p.zluser_id = :zluser_id";
-    int result = jdbc.update(sql, new SqlParamsBuilder(userId)
+        "AND b.bt_project_id = p.bt_project_id AND p.organization_id = :organization_id";
+    int result = jdbc.update(sql, new SqlParamsBuilder()
+        .withOrganization(user.getOrganizationId())
         .withInteger("zwl_build_variables_id", buildVarId).build());
     CommonUtil.validateSingleRowDbCommit(result);
   }
   
   @Override
   public List<CapturedVariable> getCapturedBuildVars(int buildId, int userId) {
+    User user = common.getUserOwnProps(userId);
     String sql = "SELECT key, value FROM bt_build_zwl_build_variables AS bv\n" +
         "INNER JOIN bt_build AS b ON (bv.bt_build_id = b.bt_build_id)\n" +
         "INNER JOIN bt_project AS p ON (b.bt_project_id = p.bt_project_id)\n" +
-        "WHERE bv.bt_build_id = :bt_build_id AND p.zluser_id = :zluser_id";
-    return jdbc.query(sql, new SqlParamsBuilder(userId).withInteger("bt_build_id", buildId).build(),
+        "WHERE bv.bt_build_id = :bt_build_id AND p.organization_id = :organization_id";
+    return jdbc.query(sql, new SqlParamsBuilder()
+            .withOrganization(user.getOrganizationId())
+            .withInteger("bt_build_id", buildId).build(),
         (rs, rowNum) -> new CapturedVariable()
             .setKey(rs.getString("key"))
             .setValue(rs.getString("value")));

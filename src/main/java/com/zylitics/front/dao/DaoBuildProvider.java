@@ -72,7 +72,7 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
                       long buildRequestId,
                       User user,
                       int projectId) {
-    common.verifyUsersProject(projectId, user.getId());
+    common.verifyUsersProject(projectId, user);
     Integer newBuildId = transactionTemplate.execute(ts -> newBuildInTransaction(
         config, buildRequestId, user, projectId));
     Objects.requireNonNull(newBuildId);
@@ -129,7 +129,7 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
                             int buildId,
                             long buildRequestId,
                             User user) {
-    common.verifyUsersBuild(buildId, user.getId());
+    common.verifyUsersBuild(buildId, user);
     Integer duplicatedBuildId = transactionTemplate
         .execute(ts -> duplicateBuildInTransaction(buildReRunConfig,buildId, buildRequestId, user));
     Objects.requireNonNull(duplicatedBuildId);
@@ -170,6 +170,7 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
   
   @Override
   public Optional<Build> getBuild(int buildId, int userId) {
+    User user = common.getUserOwnProps(userId);
     String sql = "SELECT build_key, bu.name, bt_build_vm_id, server_screen_size,\n" +
         "server_timezone_with_dst, session_key,\n" +
         "session_request_start_date AT TIME ZONE 'UTC' AS session_request_start_date,\n" +
@@ -183,8 +184,9 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
         "aet_delete_all_cookies, bt_project_id, source_type, bt_build_request_id,\n" +
         "bu.create_date AT TIME ZONE 'UTC' AS create_date\n" +
         "FROM bt_build bu JOIN bt_project USING (bt_project_id)\n" +
-        "WHERE bt_build_id = :bt_build_id AND zluser_id = :zluser_id";
-    List<Build> builds = jdbc.query(sql, new SqlParamsBuilder(userId)
+        "WHERE bt_build_id = :bt_build_id AND organization_id = :organization_id";
+    List<Build> builds = jdbc.query(sql, new SqlParamsBuilder()
+        .withOrganization(user.getOrganizationId())
         .withInteger("bt_build_id", buildId).build(), (rs, rowNum) ->
             new Build()
                 .setBuildId(buildId)
@@ -231,6 +233,7 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
       int pageSize,
       int projectId,
       int userId) {
+    User user = common.getUserOwnProps(userId);
     // - With clause doesn't fetch all the rows and limits itself based on parent's query.
     // - start and end dates in filters are in UTC and converted to OffsetDates, db already has dates
     // stored in utc, so when pg compares, it won't convert our dates to UTC and UTC - UTC comparison
@@ -251,10 +254,12 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
         "FROM bt_build bu JOIN per_status_count USING (bt_build_id)\n" +
         "JOIN bt_build_captured_capabilities USING (bt_build_id)\n" +
         "JOIN bt_project p USING (bt_project_id)\n" +
-        "WHERE p.zluser_id = :zluser_id AND p.bt_project_id = :bt_project_id\n" +
+        "WHERE p.organization_id = :organization_id AND p.bt_project_id = :bt_project_id\n" +
         "AND bu.final_status IS NOT NULL\n" +
         "AND bu.create_date >= :start_date AND bu.create_date <= :end_date\n";
-    SqlParamsBuilder paramsBuilder = new SqlParamsBuilder(projectId, userId);
+    SqlParamsBuilder paramsBuilder = new SqlParamsBuilder();
+    paramsBuilder.withProject(projectId);
+    paramsBuilder.withOrganization(user.getOrganizationId());
     paramsBuilder.withOther("success", TestStatus.SUCCESS);
     paramsBuilder.withOther("error", TestStatus.ERROR);
     paramsBuilder.withOther("stopped", TestStatus.STOPPED);
@@ -380,12 +385,14 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
   
   @Override
   public Optional<RunnerPreferences> getRunnerPrefs(int buildId, int userId) {
+    User user = common.getUserOwnProps(userId);
     String sql = "SELECT abort_on_failure, aet_keep_single_window,\n" +
         "aet_update_url_blank, aet_reset_timeouts, aet_delete_all_cookies\n" +
         "FROM bt_build AS b\n" +
         "INNER JOIN bt_project AS p ON (b.bt_project_id = p.bt_project_id)\n" +
-        "WHERE b.bt_build_id = :bt_build_id AND p.zluser_id = :zluser_id";
-    List<RunnerPreferences> runnerPreferences = jdbc.query(sql, new SqlParamsBuilder(userId)
+        "WHERE b.bt_build_id = :bt_build_id AND p.organization_id = :organization_id";
+    List<RunnerPreferences> runnerPreferences = jdbc.query(sql, new SqlParamsBuilder()
+        .withOrganization(user.getOrganizationId())
         .withInteger("bt_build_id", buildId).build(), (rs, rowNum) ->
         new RunnerPreferences()
             .setAbortOnFailure(rs.getBoolean("abort_on_failure"))
@@ -430,6 +437,7 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
   
   @Override
   public Optional<CompletedBuildDetails> getCompletedBuildDetails(int buildId, int userId) {
+    User user = common.getUserOwnProps(userId);
     String sql = "SELECT b.name build_name, b.final_status,\n" +
         "b.create_date AT TIME ZONE 'UTC' AS create_date,\n" +
         "EXTRACT(EPOCH FROM b.end_date) - EXTRACT(EPOCH FROM b.start_date) test_time_sec,\n" +
@@ -438,10 +446,12 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
         "b.all_done_date AT TIME ZONE 'UTC' AS all_done_date FROM bt_build AS b\n" +
         "INNER JOIN bt_build_captured_capabilities AS bc ON (b.bt_build_id = bc.bt_build_id)\n" +
         "INNER JOIN bt_project AS p ON (b.bt_project_id = p.bt_project_id)\n" +
-        "WHERE b.bt_build_id = :bt_build_id AND p.zluser_id = :zluser_id\n" +
+        "WHERE b.bt_build_id = :bt_build_id AND p.organization_id = :organization_id\n" +
         "AND b.final_status IS NOT NULL";
     List<CompletedBuildDetails> completedBuildDetailsList = jdbc.query(sql,
-        new SqlParamsBuilder(userId).withInteger("bt_build_id", buildId).build(), (rs, rowNum) ->
+        new SqlParamsBuilder()
+            .withOrganization(user.getOrganizationId())
+            .withInteger("bt_build_id", buildId).build(), (rs, rowNum) ->
             new CompletedBuildDetails()
                 .setBuildId(buildId)
                 .setBuildName(rs.getString("build_name"))
@@ -467,12 +477,14 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
   
   @Override
   public String getCapturedCode(int buildId, int versionId, int userId) {
+    User user = common.getUserOwnProps(userId);
     String sql = "SELECT bt_test_version_code FROM bt_build_tests\n" +
         "JOIN bt_build USING (bt_build_id) JOIN bt_project p USING (bt_project_id)\n" +
         "WHERE bt_build_id = :bt_build_id and bt_test_version_id = :bt_test_version_id\n" +
-        "AND p.zluser_id = :zluser_id";
+        "AND p.organization_id = :organization_id";
     return jdbc.query(sql,
-        new SqlParamsBuilder(userId)
+        new SqlParamsBuilder()
+            .withOrganization(user.getOrganizationId())
             .withInteger("bt_build_id", buildId)
             .withInteger("bt_test_version_id", versionId).build(),
         CommonUtil.getSingleString()).get(0);
@@ -480,14 +492,17 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
   
   @Override
   public List<RunningBuild> getRunningBuilds(Integer after, int projectId, int userId) {
+    User user = common.getUserOwnProps(userId);
     String sql = "SELECT bt_build_id, build_key, bu.name, shot_bucket_session_storage,\n" +
         "server_os, wd_browser_name\n" +
         "FROM bt_build bu JOIN bt_build_captured_capabilities USING (bt_build_id)" +
         "JOIN bt_project USING (bt_project_id)\n" +
         "WHERE ((start_date IS NOT NULL AND all_done_date IS NULL)\n" +
         "OR (session_request_start_date IS NOT NULL AND session_request_end_date IS NULL))\n" +
-        "AND bt_project_id = :bt_project_id AND zluser_id = :zluser_id\n";
-    SqlParamsBuilder paramsBuilder = new SqlParamsBuilder(projectId, userId);
+        "AND bt_project_id = :bt_project_id AND organization_id = :organization_id\n";
+    SqlParamsBuilder paramsBuilder = new SqlParamsBuilder()
+        .withProject(projectId)
+        .withOrganization(user.getOrganizationId());
     if (after != null) {
       sql += "AND bt_build_id > :after\n";
       paramsBuilder.withInteger("after", after);

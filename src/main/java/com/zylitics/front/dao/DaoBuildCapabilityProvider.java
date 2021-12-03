@@ -3,6 +3,7 @@ package com.zylitics.front.dao;
 import com.google.common.base.Preconditions;
 import com.zylitics.front.model.BuildCapability;
 import com.zylitics.front.model.BuildCapabilityIdentifier;
+import com.zylitics.front.model.User;
 import com.zylitics.front.provider.BuildCapabilityProvider;
 import com.zylitics.front.util.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,8 @@ import java.util.*;
 @Repository
 public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
     BuildCapabilityProvider {
+  
+  private final Common common;
   
   private static final String CAPTURED_CAPS_INSERT_STM =
       "INSERT INTO bt_build_captured_capabilities (bt_build_id, name,\n" +
@@ -43,19 +46,23 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
       "wd_brw_start_maximize\n";
   
   @Autowired
-  DaoBuildCapabilityProvider(NamedParameterJdbcTemplate jdbc) {
+  DaoBuildCapabilityProvider(NamedParameterJdbcTemplate jdbc, Common common) {
     super(jdbc);
+    this.common = common;
   }
   
   @Override
   public int saveNewCapability(BuildCapability buildCapability, int userId) {
     Preconditions.checkNotNull(buildCapability, "buildCapability can't be null");
+    User user = common.getUserOwnProps(userId);
     
     // first check whether there is a duplicate
-    String sql = "SELECT count(*) FROM bt_build_capability WHERE zluser_id = :zluser_id" +
-        " AND name ILIKE lower(:name);";
+    String sql = "SELECT count(*) FROM bt_build_capability\n" +
+        "WHERE organization_id = :organization_id\n" +
+        "AND name ILIKE lower(:name);";
   
-    int matchingProjects = jdbc.query(sql, new SqlParamsBuilder(userId)
+    int matchingProjects = jdbc.query(sql, new SqlParamsBuilder()
+        .withOrganization(user.getOrganizationId())
         .withOther("name", buildCapability.getName()).build(), CommonUtil.getSingleInt()).get(0);
     if (matchingProjects > 0) {
       throw new IllegalArgumentException("A build capability with the same name already exists");
@@ -69,7 +76,7 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
         "wd_ie_disable_native_events, wd_ie_destructively_ensure_clean_session,\n" +
         "wd_ie_log_level, wd_chrome_verbose_logging, wd_chrome_silent_output,\n" +
         "wd_chrome_enable_network, wd_chrome_enable_page, wd_firefox_log_level,\n" +
-        "wd_brw_start_maximize, zluser_id, create_date) VALUES\n" +
+        "wd_brw_start_maximize, zluser_id, organization_id, create_date) VALUES\n" +
         "(:name, :server_os, :wd_browser_name, :wd_browser_version,\n" +
         ":wd_platform_name, :wd_accept_insecure_certs, :wd_timeouts_script,\n" +
         ":wd_timeouts_page_load, :wd_timeouts_element_access, :wd_strict_file_interactability,\n" +
@@ -78,10 +85,11 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
         ":wd_ie_disable_native_events, :wd_ie_destructively_ensure_clean_session,\n" +
         ":wd_ie_log_level, :wd_chrome_verbose_logging, :wd_chrome_silent_output,\n" +
         ":wd_chrome_enable_network, :wd_chrome_enable_page, :wd_firefox_log_level,\n" +
-        ":wd_brw_start_maximize, :zluser_id, :create_date) RETURNING bt_build_capability_id;";
+        ":wd_brw_start_maximize, :zluser_id, :organization_id, :create_date)\n" +
+        "RETURNING bt_build_capability_id;";
   
     return jdbc.query(sql,
-        getBuildCapsParams(buildCapability, userId, true),
+        getBuildCapsParams(buildCapability, userId, user.getOrganizationId(), true),
         CommonUtil.getSingleInt()).get(0);
   }
   
@@ -111,13 +119,17 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
   public void updateCapability(BuildCapability buildCapability, int userId) {
     Preconditions.checkNotNull(buildCapability, "buildCapability can't be null");
     Preconditions.checkArgument(buildCapability.getId() > 0, "buildCapabilityId must be given");
+    
+    User user = common.getUserOwnProps(userId);
   
     // first check whether there is a duplicate
-    String sql = "SELECT count(*) FROM bt_build_capability WHERE zluser_id = :zluser_id" +
-        " AND bt_build_capability_id <> :bt_build_capability_id AND name ILIKE lower(:name);";
+    String sql = "SELECT count(*) FROM bt_build_capability\n" +
+        "WHERE organization_id = :organization_id\n" +
+        "AND bt_build_capability_id <> :bt_build_capability_id AND name ILIKE lower(:name);";
   
     int matchingProjects = jdbc.query(sql,
-        new SqlParamsBuilder(userId)
+        new SqlParamsBuilder()
+            .withOrganization(user.getOrganizationId())
             .withOther("name", buildCapability.getName())
             .withInteger("bt_build_capability_id", buildCapability.getId()).build(),
         CommonUtil.getSingleInt()).get(0);
@@ -150,19 +162,22 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
         "wd_brw_start_maximize = :wd_brw_start_maximize\n" +
         "WHERE bt_build_capability_id = :bt_build_capability_id";
   
-    int result = jdbc.update(sql, getBuildCapsParams(buildCapability, userId, false));
+    int result = jdbc.update(sql, getBuildCapsParams(buildCapability, userId,
+        user.getOrganizationId(), false));
     CommonUtil.validateSingleRowDbCommit(result);
   }
   
   @Override
   public List<BuildCapabilityIdentifier> getBuildCapabilitiesIdentifier(int userId) {
+    User user = common.getUserOwnProps(userId);
     String sql = "SELECT" +
         " bt_build_capability_id" +
         ", name" +
-        " FROM bt_build_capability WHERE zluser_id = :zluser_id;";
+        " FROM bt_build_capability WHERE organization_id = :organization_id;";
   
-    return jdbc.query(sql, new SqlParamsBuilder(userId).build(), (rs, rowNum) ->
-        new BuildCapabilityIdentifier()
+    return jdbc.query(sql,
+        new SqlParamsBuilder().withOrganization(user.getOrganizationId()).build(),
+        (rs, rowNum) -> new BuildCapabilityIdentifier()
             .setId(rs.getInt("bt_build_capability_id"))
             .setName(rs.getString("name")));
   }
@@ -170,6 +185,7 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
   @Override
   public Optional<BuildCapability> getBuildCapability(int buildCapabilityId, int userId) {
     Preconditions.checkArgument(buildCapabilityId > 0, "buildCapabilityId is required");
+    User user = common.getUserOwnProps(userId);
   
     // when we need create_date, join with user and get timezone, get create_date at that timezone
     // and format the time to display at front end (from util).
@@ -197,10 +213,12 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
         "wd_firefox_log_level,\n" +
         "wd_brw_start_maximize\n" +
         "FROM bt_build_capability\n" +
-        "WHERE bt_build_capability_id = :bt_build_capability_id AND zluser_id = :zluser_id";
+        "WHERE bt_build_capability_id = :bt_build_capability_id\n" +
+        "AND organization_id = :organization_id";
   
     List<BuildCapability> buildCapabilities = jdbc.query(sql,
-        new SqlParamsBuilder(userId)
+        new SqlParamsBuilder()
+            .withOrganization(user.getOrganizationId())
             .withInteger("bt_build_capability_id", buildCapabilityId).build(), (rs, rowNum) ->
         new BuildCapability()
             .setName(rs.getString("name"))
@@ -236,19 +254,24 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
   @Override
   public void deleteCapability(int buildCapabilityId, int userId) {
     Preconditions.checkArgument(buildCapabilityId > 0, "buildCapabilityId is required");
+    User user = common.getUserOwnProps(userId);
     
     String sql = "DELETE FROM bt_build_capability\n" +
-        "WHERE bt_build_capability_id = :bt_build_capability_id AND zluser_id = :zluser_id";
+        "WHERE bt_build_capability_id = :bt_build_capability_id\n" +
+        "AND organization_id = :organization_id";
   
-    int result = jdbc.update(sql, new SqlParamsBuilder(userId)
+    int result = jdbc.update(sql, new SqlParamsBuilder()
+        .withOrganization(user.getOrganizationId())
         .withInteger("bt_build_capability_id", buildCapabilityId).build());
     CommonUtil.validateSingleRowDbCommit(result);
   }
   
   private SqlParameterSource getBuildCapsParams(BuildCapability buildCapability,
                                                 int userId,
+                                                int organizationId,
                                                 boolean addCreateDate) {
     SqlParamsBuilder builder = new SqlParamsBuilder(userId);
+    builder.withOrganization(organizationId);
     if (buildCapability.getId() > 0) {
       builder.withInteger("bt_build_capability_id", buildCapability.getId());
     }
@@ -290,6 +313,7 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
   
   @Override
   public Optional<BuildCapability> getCapturedCapability(int buildId, int userId) {
+    User user = common.getUserOwnProps(userId);
     String sql = "SELECT bc.name, server_os, wd_browser_name,\n" +
         "wd_browser_version, wd_platform_name, wd_accept_insecure_certs, wd_timeouts_script,\n" +
         "wd_timeouts_page_load, wd_timeouts_element_access, wd_strict_file_interactability,\n" +
@@ -301,9 +325,10 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
         "wd_brw_start_maximize FROM bt_build_captured_capabilities AS bc\n" +
         "INNER JOIN bt_build AS b ON (bc.bt_build_id = b.bt_build_id)\n" +
         "INNER JOIN bt_project AS p ON (b.bt_project_id = p.bt_project_id)\n" +
-        "WHERE bc.bt_build_id = :bt_build_id AND p.zluser_id = :zluser_id";
+        "WHERE bc.bt_build_id = :bt_build_id AND p.organization_id = :organization_id";
     List<BuildCapability> buildCapabilities = jdbc.query(sql,
-        new SqlParamsBuilder(userId)
+        new SqlParamsBuilder()
+            .withOrganization(user.getOrganizationId())
             .withInteger("bt_build_id", buildId).build(), (rs, rowNum) ->
             new BuildCapability()
                 .setName(rs.getString("name"))

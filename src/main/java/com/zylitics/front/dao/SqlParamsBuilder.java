@@ -27,6 +27,11 @@ class SqlParamsBuilder {
   
   SqlParamsBuilder() {}
   
+  SqlParamsBuilder withOrganization(int organizationId) {
+    params.put("organization_id", new SqlParameterValue(Types.INTEGER, organizationId));
+    return this;
+  }
+  
   SqlParamsBuilder withProject(int projectId) {
     params.put("bt_project_id", new SqlParameterValue(Types.INTEGER, projectId));
     return this;

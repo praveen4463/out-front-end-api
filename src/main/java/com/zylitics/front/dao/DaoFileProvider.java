@@ -3,10 +3,7 @@ package com.zylitics.front.dao;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.MultimapBuilder;
-import com.zylitics.front.model.File;
-import com.zylitics.front.model.FileIdentifier;
-import com.zylitics.front.model.Test;
-import com.zylitics.front.model.TestVersion;
+import com.zylitics.front.model.*;
 import com.zylitics.front.provider.FileProvider;
 import com.zylitics.front.util.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,15 +19,19 @@ import java.util.Map.Entry;
 @Repository
 public class DaoFileProvider extends AbstractDaoProvider implements FileProvider {
   
+  private final Common common;
+  
   @Autowired
-  DaoFileProvider(NamedParameterJdbcTemplate jdbc) {
+  DaoFileProvider(NamedParameterJdbcTemplate jdbc, Common common) {
     super(jdbc);
+    this.common = common;
   }
   
   // to verify user owns projects without separate queries, let's don't join while checking for
   // dupes but include when doing actual insertion, in case of a problem insert will fail.
   @Override
   public File newFile(File file, int projectId, int userId) {
+    User user = common.getUserOwnProps(userId);
     String sql = "SELECT count(*) FROM bt_file\n" +
         "WHERE name ILIKE lower(:name) AND bt_project_id = :bt_project_id;";
     int matchingNames = jdbc.query(sql, new SqlParamsBuilder()
@@ -41,9 +42,11 @@ public class DaoFileProvider extends AbstractDaoProvider implements FileProvider
     }
     sql = "INSERT INTO bt_file (name, bt_project_id, create_date)\n" +
         "SELECT :name, bt_project_id, :create_date FROM bt_project\n" +
-        "WHERE bt_project_id = :bt_project_id AND zluser_id = :zluser_id\n" +
+        "WHERE bt_project_id = :bt_project_id AND organization_id = :organization_id\n" +
         "RETURNING bt_file_id";
-    return jdbc.query(sql, new SqlParamsBuilder(projectId, userId)
+    return jdbc.query(sql, new SqlParamsBuilder()
+        .withProject(projectId)
+        .withOrganization(user.getOrganizationId())
         .withVarchar("name", file.getName())
         .withCreateDate().build(), (rs, rowNum) ->
         new File()
@@ -53,11 +56,15 @@ public class DaoFileProvider extends AbstractDaoProvider implements FileProvider
   
   @Override
   public List<FileIdentifier> getFilesIdentifier(int projectId, int userId) {
+    User user = common.getUserOwnProps(userId);
     String sql = "SELECT f.bt_file_id, f.name FROM bt_file AS f\n" +
         "INNER JOIN bt_project AS p ON (f.bt_project_id = p.bt_project_id)\n" +
-        "WHERE f.bt_project_id = :bt_project_id AND p.zluser_id = :zluser_id;";
-  
-    SqlParameterSource namedParams = new SqlParamsBuilder(projectId, userId).build();
+        "WHERE f.bt_project_id = :bt_project_id AND p.organization_id = :organization_id;";
+    
+    SqlParameterSource namedParams = new SqlParamsBuilder()
+        .withProject(projectId)
+        .withOrganization(user.getOrganizationId())
+        .build();
     
     return jdbc.query(sql, namedParams, (rs, rowNum) -> new FileIdentifier()
         .setId(rs.getInt("bt_file_id"))
@@ -74,6 +81,7 @@ public class DaoFileProvider extends AbstractDaoProvider implements FileProvider
                                       boolean excludeNoCodeTests,
                                       boolean includeNoTestFiles,
                                       int userId) {
+    User user = common.getUserOwnProps(userId);
     boolean filterFiles = fileIdsFilter.size() > 0;
     // contains only files that have tests
     Map<Integer, File> fileIdToFile = new HashMap<>();
@@ -83,7 +91,9 @@ public class DaoFileProvider extends AbstractDaoProvider implements FileProvider
     ListMultimap<Integer, TestVersion> testIdToVersions =
         MultimapBuilder.hashKeys().arrayListValues().build();
   
-    SqlParamsBuilder fileParamsBuilder = new SqlParamsBuilder(projectId, userId);
+    SqlParamsBuilder fileParamsBuilder = new SqlParamsBuilder()
+        .withProject(projectId)
+        .withOrganization(user.getOrganizationId());
     
     // Following query will verify that user is authorized to these files and filters files that
     // have tests.
@@ -91,7 +101,7 @@ public class DaoFileProvider extends AbstractDaoProvider implements FileProvider
         "INNER JOIN bt_project AS p ON (f.bt_project_id = p.bt_project_id)\n" +
         (includeNoTestFiles ? "LEFT" : "INNER") +
         " JOIN bt_test AS t ON (f.bt_file_id = t.bt_file_id)\n" +
-        "WHERE p.zluser_id = :zluser_id AND p.bt_project_id = :bt_project_id\n");
+        "WHERE p.organization_id = :organization_id AND p.bt_project_id = :bt_project_id\n");
     
     if (filterFiles) {
       sqlFile.append("AND f.bt_file_id IN (select * from unnest(:file_ids));");
@@ -181,6 +191,7 @@ public class DaoFileProvider extends AbstractDaoProvider implements FileProvider
   @Override
   public void renameFile(File file, int projectId, int userId) {
     Preconditions.checkArgument(file.getId() > 0, "fileId is required");
+    User user = common.getUserOwnProps(userId);
     
     String sql = "SELECT count(*) FROM bt_file WHERE bt_file_id <> :bt_file_id\n" +
         "AND name ILIKE lower(:name) AND bt_project_id = :bt_project_id;";
@@ -194,8 +205,10 @@ public class DaoFileProvider extends AbstractDaoProvider implements FileProvider
     sql = "UPDATE bt_file AS f SET name = :name\n" +
         "FROM bt_project AS p WHERE bt_file_id = :bt_file_id\n" +
         "AND f.bt_project_id = p.bt_project_id AND f.bt_project_id = :bt_project_id\n" +
-        "AND p.zluser_id = :zluser_id;";
-    int result = jdbc.update(sql, new SqlParamsBuilder(projectId, userId)
+        "AND p.organization_id = :organization_id;";
+    int result = jdbc.update(sql, new SqlParamsBuilder()
+        .withProject(projectId)
+        .withOrganization(user.getOrganizationId())
         .withVarchar("name", file.getName())
         .withInteger("bt_file_id", file.getId()).build());
     CommonUtil.validateSingleRowDbCommit(result);
@@ -203,11 +216,13 @@ public class DaoFileProvider extends AbstractDaoProvider implements FileProvider
   
   @Override
   public void deleteFile(int fileId, int userId) {
+    User user = common.getUserOwnProps(userId);
     // This will delete all tests and versions via cascade
     String sql = "DELETE FROM bt_file AS f\n" +
         "USING bt_project AS p WHERE bt_file_id = :bt_file_id\n" +
-        "AND f.bt_project_id = p.bt_project_id AND p.zluser_id = :zluser_id;";
-    int result = jdbc.update(sql, new SqlParamsBuilder(userId)
+        "AND f.bt_project_id = p.bt_project_id AND p.organization_id = :organization_id;";
+    int result = jdbc.update(sql, new SqlParamsBuilder()
+        .withOrganization(user.getOrganizationId())
         .withInteger("bt_file_id", fileId).build());
     CommonUtil.validateSingleRowDbCommit(result);
   }

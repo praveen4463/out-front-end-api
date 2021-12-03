@@ -3,6 +3,7 @@ package com.zylitics.front.dao;
 import com.google.common.base.Preconditions;
 import com.zylitics.front.model.TestVersion;
 import com.zylitics.front.model.TestVersionRename;
+import com.zylitics.front.model.User;
 import com.zylitics.front.provider.TestVersionProvider;
 import com.zylitics.front.util.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,14 +22,19 @@ public class DaoTestVersionProvider extends AbstractDaoProvider implements TestV
   
   private final TransactionTemplate transactionTemplate;
   
+  private final Common common;
+  
   @Autowired
-  DaoTestVersionProvider(NamedParameterJdbcTemplate jdbc, TransactionTemplate transactionTemplate) {
+  DaoTestVersionProvider(NamedParameterJdbcTemplate jdbc, TransactionTemplate transactionTemplate,
+                        Common common) {
     super(jdbc);
     this.transactionTemplate = transactionTemplate;
+    this.common = common;
   }
   
   @Override
   public TestVersion newVersion(TestVersion testVersion, int userId) {
+    User user = common.getUserOwnProps(userId);
     String sql = "SELECT count(*) FROM bt_test_version WHERE name ILIKE lower(:name)\n" +
         "AND bt_test_id = :bt_test_id";
     int matchingVersions = jdbc.query(sql, new SqlParamsBuilder()
@@ -47,11 +53,13 @@ public class DaoTestVersionProvider extends AbstractDaoProvider implements TestV
           "FROM bt_test AS t INNER JOIN bt_file AS f ON (t.bt_file_id = f.bt_file_id)\n" +
           "INNER JOIN bt_project p ON (f.bt_project_id = p.bt_project_id)\n" +
           "WHERE v.bt_test_id = t.bt_test_id AND v.bt_test_id = :bt_test_id\n" +
-          "AND v.is_current = true AND p.zluser_id = :zluser_id RETURNING bt_test_version_id";
+          "AND v.is_current = true AND p.organization_id = :organization_id\n" +
+          "RETURNING bt_test_version_id";
       // !! queryForObject is needed here !!
       // following will throw exception if other than 1 row is returned by the update, we are
       // returning testVersionId that was latest because it is needed to get last version's code
-      Integer lastCurrentVersionId = jdbc.queryForObject(updateSql, new SqlParamsBuilder(userId)
+      Integer lastCurrentVersionId = jdbc.queryForObject(updateSql, new SqlParamsBuilder()
+          .withOrganization(user.getOrganizationId())
           .withInteger("bt_test_id", testVersion.getTestId()).build(), Integer.class);
       Objects.requireNonNull(lastCurrentVersionId);
       
@@ -76,6 +84,7 @@ public class DaoTestVersionProvider extends AbstractDaoProvider implements TestV
   
   @Override
   public void renameVersion(int versionId, TestVersionRename testVersionRename, int userId) {
+    User user = common.getUserOwnProps(userId);
     String sql = "SELECT count(*) FROM bt_test_version\n" +
         "WHERE bt_test_version_id <> :bt_test_version_id\n" +
         "AND name ILIKE lower(:name) AND bt_test_id = :bt_test_id;";
@@ -91,8 +100,9 @@ public class DaoTestVersionProvider extends AbstractDaoProvider implements TestV
         "FROM bt_test AS t INNER JOIN bt_file AS f ON (t.bt_file_id = f.bt_file_id)\n" +
         "INNER JOIN bt_project p ON (f.bt_project_id = p.bt_project_id)\n" +
         "WHERE bt_test_version_id = :bt_test_version_id AND v.bt_test_id = t.bt_test_id\n" +
-        "AND p.zluser_id = :zluser_id";
-    int result = jdbc.update(sql, new SqlParamsBuilder(userId)
+        "AND p.organization_id = :organization_id";
+    int result = jdbc.update(sql, new SqlParamsBuilder()
+        .withOrganization(user.getOrganizationId())
         .withVarchar("name", testVersionRename.getName())
         .withInteger("bt_test_version_id", versionId).build());
     CommonUtil.validateSingleRowDbCommit(result);
@@ -100,12 +110,14 @@ public class DaoTestVersionProvider extends AbstractDaoProvider implements TestV
   
   @Override
   public void updateCode(int versionId, String code, int userId) {
+    User user = common.getUserOwnProps(userId);
     String sql = "UPDATE bt_test_version AS v SET code = :code\n" +
         "FROM bt_test AS t INNER JOIN bt_file AS f ON (t.bt_file_id = f.bt_file_id)\n" +
         "INNER JOIN bt_project p ON (f.bt_project_id = p.bt_project_id)\n" +
         "WHERE bt_test_version_id = :bt_test_version_id AND v.bt_test_id = t.bt_test_id\n" +
-        "AND p.zluser_id = :zluser_id";
-    int result = jdbc.update(sql, new SqlParamsBuilder(userId)
+        "AND p.organization_id = :organization_id";
+    int result = jdbc.update(sql, new SqlParamsBuilder()
+        .withOrganization(user.getOrganizationId())
         .withOther("code", code)
         .withInteger("bt_test_version_id", versionId).build());
     CommonUtil.validateSingleRowDbCommit(result);
@@ -113,12 +125,14 @@ public class DaoTestVersionProvider extends AbstractDaoProvider implements TestV
   
   @Override
   public String getCode(int versionId, int userId) {
+    User user = common.getUserOwnProps(userId);
     String sql = "SELECT code FROM bt_test_version v\n" +
         "INNER JOIN bt_test AS t ON (v.bt_test_id = t.bt_test_id)\n" +
         "INNER JOIN bt_file AS f ON (t.bt_file_id = f.bt_file_id)\n" +
         "INNER JOIN bt_project p ON (f.bt_project_id = p.bt_project_id)\n" +
-        "WHERE bt_test_version_id = :bt_test_version_id AND p.zluser_id = :zluser_id";
-    List<String> existingCodes = jdbc.query(sql, new SqlParamsBuilder(userId)
+        "WHERE bt_test_version_id = :bt_test_version_id AND p.organization_id = :organization_id";
+    List<String> existingCodes = jdbc.query(sql, new SqlParamsBuilder()
+        .withOrganization(user.getOrganizationId())
         .withInteger("bt_test_version_id", versionId).build(), CommonUtil.getSingleString());
     if (existingCodes.size() == 0) {
       throw new RuntimeException("Given versionId " + versionId + " wasn't found");
@@ -128,6 +142,7 @@ public class DaoTestVersionProvider extends AbstractDaoProvider implements TestV
   
   @Override
   public Map<Integer, String> getCodes(List<Integer> versionIds, int userId) {
+    User user = common.getUserOwnProps(userId);
     Preconditions.checkArgument(versionIds.size() > 0, "versionIds can't be empty");
     Map<Integer, String> codes = new HashMap<>();
     String sql = "SELECT bt_test_version_id, code FROM bt_test_version AS v\n" +
@@ -135,8 +150,9 @@ public class DaoTestVersionProvider extends AbstractDaoProvider implements TestV
         "INNER JOIN bt_file AS f ON (t.bt_file_id = f.bt_file_id)\n" +
         "INNER JOIN bt_project p ON (f.bt_project_id = p.bt_project_id)\n" +
         "WHERE bt_test_version_id IN (SELECT * FROM unnest(:bt_test_version_ids))\n" +
-        "AND p.zluser_id = :zluser_id";
-    jdbc.query(sql, new SqlParamsBuilder(userId)
+        "AND p.organization_id = :organization_id";
+    jdbc.query(sql, new SqlParamsBuilder()
+        .withOrganization(user.getOrganizationId())
         .withArray("bt_test_version_ids", versionIds.toArray(), JDBCType.INTEGER).build(),
         (rs -> {
           codes.put(rs.getInt("bt_test_version_id"), rs.getString("code"));
@@ -150,14 +166,16 @@ public class DaoTestVersionProvider extends AbstractDaoProvider implements TestV
   @Override
   public boolean anyVersionHasBlankCode(List<Integer> versionIds, int userId) {
     Preconditions.checkArgument(versionIds.size() > 0, "versionIds can't be empty");
+    User user = common.getUserOwnProps(userId);
     String sql = "SELECT count(*) FROM bt_test_version AS v\n" +
         "INNER JOIN bt_test AS t ON (v.bt_test_id = t.bt_test_id)\n" +
         "INNER JOIN bt_file AS f ON (t.bt_file_id = f.bt_file_id)\n" +
         "INNER JOIN bt_project p ON (f.bt_project_id = p.bt_project_id)\n" +
         "WHERE bt_test_version_id IN (SELECT * FROM unnest(:bt_test_version_ids))\n" +
-        "AND p.zluser_id = :zluser_id AND v.code IS NOT NULL\n" +
+        "AND p.organization_id = :organization_id AND v.code IS NOT NULL\n" +
         "AND length(regexp_replace(coalesce(v.code, ''), '[\\n\\r\\t\\s]', '', 'g')) > 0";
-    int total = jdbc.query(sql, new SqlParamsBuilder(userId)
+    int total = jdbc.query(sql, new SqlParamsBuilder()
+            .withOrganization(user.getOrganizationId())
             .withArray("bt_test_version_ids", versionIds.toArray(), JDBCType.INTEGER).build(),
         CommonUtil.getSingleInt()).get(0);
     return total < versionIds.size(); // if total is lesser than all given version it may mean two
@@ -210,13 +228,15 @@ public class DaoTestVersionProvider extends AbstractDaoProvider implements TestV
   
   @Override
   public void deleteVersion(int versionId, int userId) {
+    User user = common.getUserOwnProps(userId);
     // version that's current one can't be deleted
     String sql = "DELETE FROM bt_test_version AS v\n" +
         "USING bt_test AS t INNER JOIN bt_file AS f ON (t.bt_file_id = f.bt_file_id)\n" +
         "INNER JOIN bt_project p ON (f.bt_project_id = p.bt_project_id)\n" +
         "WHERE bt_test_version_id = :bt_test_version_id AND v.is_current = false\n" +
-        "AND v.bt_test_id = t.bt_test_id AND p.zluser_id = :zluser_id;";
-    int result = jdbc.update(sql, new SqlParamsBuilder(userId)
+        "AND v.bt_test_id = t.bt_test_id AND p.organization_id = :organization_id;";
+    int result = jdbc.update(sql, new SqlParamsBuilder()
+        .withOrganization(user.getOrganizationId())
         .withInteger("bt_test_version_id", versionId).build());
     CommonUtil.validateSingleRowDbCommit(result);
   }

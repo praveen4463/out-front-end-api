@@ -145,4 +145,13 @@ Bug fixes
 
 ### Bug fixes
 
-1. Fixed a bug in fileWithTests to allow files having no tests.  
+1. Fixed a bug in fileWithTests to allow files having no tests.
+
+## v0.3.20
+
+Enhancements
+
+### Enhancements
+
+1. Added team invite.
+2. Upgraded zwl to 0.6.3

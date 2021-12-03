@@ -12,6 +12,8 @@ public interface UserProvider {
   
   Optional<User> getUser(int userId);
   
+  Optional<User> getUser(int userId, boolean ownDetailsOnly);
+  
   String getUserEmail(int userId);
   
   Optional<Integer> getUserId(String email);

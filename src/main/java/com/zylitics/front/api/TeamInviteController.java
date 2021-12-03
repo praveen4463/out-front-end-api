@@ -1,7 +1,5 @@
 package com.zylitics.front.api;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import com.google.firebase.auth.FirebaseAuth;
 import com.zylitics.front.config.APICoreProperties;
 import com.zylitics.front.model.*;
@@ -9,23 +7,15 @@ import com.zylitics.front.provider.EmailVerificationProvider;
 import com.zylitics.front.provider.OrganizationProvider;
 import com.zylitics.front.provider.UserProvider;
 import com.zylitics.front.services.EmailService;
-import com.zylitics.front.services.SendTemplatedEmail;
-import com.zylitics.front.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.constraints.NotBlank;
-import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
-// TODO: This controller is not yet added to openapi
-//  Team invite link must go to a separate/new page at front end, validate code and redirect to
-//  finish-signup if all good.
 @RestController
 @RequestMapping("${app-short-version}/teamInvite")
 public class TeamInviteController  extends AbstractController {
@@ -148,8 +138,8 @@ public class TeamInviteController  extends AbstractController {
     return ResponseEntity.ok().build();
   }*/
   
-  @PatchMapping("/{code}/validateTeamInvite")
-  public ResponseEntity<?> validateTeamInvite(
+  @PatchMapping("/{code}/validate")
+  public ResponseEntity<?> validate(
       @PathVariable @NotBlank String code,
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo) {
     assertAnonymousUser(userInfo);

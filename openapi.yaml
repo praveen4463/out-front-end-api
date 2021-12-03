@@ -10,7 +10,7 @@ info:
   title: Zylitics front end api
   # This version no. is just to showing in the console and has no affect on functionality, although it should be
   # updated whenever production version is updated.
-  version: 0.3.19
+  version: 0.3.20
 host: front.api.zylitics.io
 x-google-endpoints:
   - name: front.api.zylitics.io
@@ -221,6 +221,19 @@ paths:
     patch:
       description: Validate email verification request
       operationId: validateEmailVerification
+      parameters:
+        - $ref: '#/parameters/code'
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+  /teamInvite/{code}/validate:
+    patch:
+      description: Validate team invitation request
+      operationId: validateTeamInvite
       parameters:
         - $ref: '#/parameters/code'
       responses:

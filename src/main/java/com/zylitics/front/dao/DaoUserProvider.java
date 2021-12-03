@@ -82,19 +82,29 @@ public class DaoUserProvider extends AbstractDaoProvider implements UserProvider
   
   @Override
   public Optional<User> getUser(int userId) {
+    return getUser(userId, false);
+  }
+  
+  @Override
+  public Optional<User> getUser(int userId, boolean ownDetailsOnly) {
     String sql = "SELECT first_name, last_name, email, timezone, role, u.organization_id,\n" +
-        "o.name AS org_name, shot_bucket_session_storage, email_verification_id,\n" +
-        "p.name AS plan_name, plan_type, p.display_name,\n" +
-        "minutes, total_parallel, coalesce(minutes_consumed, 0) AS minutes_consumed,\n" +
-        "billing_cycle_start AT TIME ZONE 'UTC' AS billing_cycle_start,\n" +
-        "billing_cycle_planned_end AT TIME ZONE 'UTC' AS billing_cycle_planned_end\n" +
-        "FROM zluser AS u\n" +
-        "INNER JOIN organization AS o ON (u.organization_id = o.organization_id)\n" +
-        "INNER JOIN quota AS q ON (o.organization_id = q.organization_id)\n" +
-        "INNER JOIN plan AS p ON (q.plan_id = p.plan_id)\n" +
-        "WHERE u.zluser_id = :zluser_id AND q.billing_cycle_actual_end IS NULL";
-    List<User> user = jdbc.query(sql, new SqlParamsBuilder(userId).build(), (rs, rowNum) ->
-        new User()
+        "shot_bucket_session_storage, email_verification_id\n";
+    
+    if (ownDetailsOnly) {
+      sql += "FROM zluser AS u WHERE zluser_id = :zluser_id";
+    } else {
+      sql += ", o.name AS org_name, p.name AS plan_name, plan_type, p.display_name,\n" +
+          "minutes, total_parallel, coalesce(minutes_consumed, 0) AS minutes_consumed,\n" +
+          "billing_cycle_start AT TIME ZONE 'UTC' AS billing_cycle_start,\n" +
+          "billing_cycle_planned_end AT TIME ZONE 'UTC' AS billing_cycle_planned_end\n" +
+          "FROM zluser AS u\n" +
+          "INNER JOIN organization AS o ON (u.organization_id = o.organization_id)\n" +
+          "INNER JOIN quota AS q ON (o.organization_id = q.organization_id)\n" +
+          "INNER JOIN plan AS p ON (q.plan_id = p.plan_id)\n" +
+          "WHERE u.zluser_id = :zluser_id AND q.billing_cycle_actual_end IS NULL";
+    }
+    List<User> user = jdbc.query(sql, new SqlParamsBuilder(userId).build(), (rs, rowNum) -> {
+        User u = new User()
             .setId(userId)
             .setFirstName(rs.getString("first_name"))
             .setLastName(rs.getString("last_name"))
@@ -103,8 +113,9 @@ public class DaoUserProvider extends AbstractDaoProvider implements UserProvider
             .setRole(Role.valueOf(rs.getString("role")))
             .setOrganizationId(rs.getInt("organization_id"))
             .setShotBucketSessionStorage(rs.getString("shot_bucket_session_storage"))
-            .setEmailVerificationId(rs.getLong("email_verification_id"))
-            .setOrganization(new Organization()
+            .setEmailVerificationId(rs.getLong("email_verification_id"));
+        if (!ownDetailsOnly) {
+          u.setOrganization(new Organization()
                 .setName(rs.getString("org_name")))
             .setUsersPlan(new UsersPlan()
                 .setPlanName(rs.getString("plan_name"))
@@ -117,7 +128,11 @@ public class DaoUserProvider extends AbstractDaoProvider implements UserProvider
                     DateTimeUtil.sqlUTCTimestampToEpochSecs(rs.getTimestamp("billing_cycle_start")))
                 .setBillingCyclePlannedEnd(DateTimeUtil.sqlUTCTimestampToEpochSecs(
                     rs.getTimestamp("billing_cycle_planned_end")))
-            ));
+            );
+        }
+        return u;
+    });
+    
     if (user.size() == 0) {
       return Optional.empty();
     }

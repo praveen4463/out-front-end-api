@@ -1,6 +1,7 @@
 package com.zylitics.front.dao;
 
 import com.zylitics.front.model.BuildVM;
+import com.zylitics.front.model.User;
 import com.zylitics.front.provider.BuildVMProvider;
 import com.zylitics.front.util.CommonUtil;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -12,8 +13,11 @@ import java.util.Optional;
 @Repository
 public class DaoBuildVMProvider extends AbstractDaoProvider implements BuildVMProvider {
   
-  public DaoBuildVMProvider(NamedParameterJdbcTemplate jdbc) {
+  private final Common common;
+  
+  DaoBuildVMProvider(NamedParameterJdbcTemplate jdbc, Common common) {
     super(jdbc);
+    this.common = common;
   }
   
   @Override
@@ -30,12 +34,14 @@ public class DaoBuildVMProvider extends AbstractDaoProvider implements BuildVMPr
   
   @Override
   public Optional<BuildVM> getBuildVMByBuild(int buildId, int userId) {
+    User user = common.getUserOwnProps(userId);
     String sql = "SELECT bv.bt_build_vm_id, bv.internal_ip, bv.name, bv.zone,\n" +
         "bv.delete_from_runner FROM bt_build_vm AS bv\n" +
         "INNER JOIN bt_build AS bu ON (bv.bt_build_vm_id = bu.bt_build_vm_id)\n" +
         "INNER JOIN bt_project AS p ON (bu.bt_project_id = p.bt_project_id)\n" +
-        "WHERE bu.bt_build_id = :bt_build_id AND p.zluser_id = :zluser_id";
-    List<BuildVM> vms = jdbc.query(sql, new SqlParamsBuilder(userId)
+        "WHERE bu.bt_build_id = :bt_build_id AND p.organization_id = :organization_id";
+    List<BuildVM> vms = jdbc.query(sql, new SqlParamsBuilder()
+        .withOrganization(user.getOrganizationId())
         .withInteger("bt_build_id", buildId).build(), (rs, rowNum) ->
         new BuildVM()
             .setId(rs.getInt("bt_build_vm_id"))

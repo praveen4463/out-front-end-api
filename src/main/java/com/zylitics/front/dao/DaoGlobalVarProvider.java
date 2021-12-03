@@ -3,6 +3,7 @@ package com.zylitics.front.dao;
 import com.google.common.base.Preconditions;
 import com.zylitics.front.model.CapturedVariable;
 import com.zylitics.front.model.GlobalVar;
+import com.zylitics.front.model.User;
 import com.zylitics.front.provider.GlobalVarProvider;
 import com.zylitics.front.util.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,14 +16,17 @@ import java.util.List;
 @Repository
 public class DaoGlobalVarProvider extends AbstractDaoProvider implements GlobalVarProvider {
   
-  @Autowired
-  DaoGlobalVarProvider(NamedParameterJdbcTemplate jdbc) {
+  private final Common common;
+  
+  DaoGlobalVarProvider(NamedParameterJdbcTemplate jdbc, Common common) {
     super(jdbc);
+    this.common = common;
   }
   
   @Override
   public int newGlobalVar(GlobalVar globalVar, int projectId, int userId) {
     Preconditions.checkNotNull(globalVar, "globalVar can't be null");
+    User user = common.getUserOwnProps(userId);
   
     // first check whether there is a duplicate
     String sql = "SELECT count(*) FROM zwl_globals WHERE bt_project_id = :bt_project_id\n" +
@@ -38,9 +42,11 @@ public class DaoGlobalVarProvider extends AbstractDaoProvider implements GlobalV
     // make sure user owns the projectId
     sql = "INSERT INTO zwl_globals (key, value, bt_project_id)\n" +
         "SELECT :key, :value, bt_project_id FROM bt_project\n" +
-        "WHERE bt_project_id = :bt_project_id AND zluser_id = :zluser_id\n" +
+        "WHERE bt_project_id = :bt_project_id AND organization_id = :organization_id\n" +
         "RETURNING zwl_globals_id;";
-    SqlParameterSource namedParamsInsert = new SqlParamsBuilder(projectId, userId)
+    SqlParameterSource namedParamsInsert = new SqlParamsBuilder()
+        .withProject(projectId)
+        .withOrganization(user.getOrganizationId())
         .withVarchar("key", globalVar.getKey())
         .withOther("value", globalVar.getValue()).build();
     return jdbc.query(sql, namedParamsInsert, CommonUtil.getSingleInt()).get(0);
@@ -48,11 +54,15 @@ public class DaoGlobalVarProvider extends AbstractDaoProvider implements GlobalV
   
   @Override
   public List<GlobalVar> getGlobalVars(int projectId, int userId) {
+    User user = common.getUserOwnProps(userId);
     String sql = "SELECT g.zwl_globals_id, g.key, g.value FROM zwl_globals AS g\n" +
         "INNER JOIN bt_project AS p ON (g.bt_project_id = p.bt_project_id)\n" +
-        "WHERE g.bt_project_id = :bt_project_id AND p.zluser_id = :zluser_id;";
+        "WHERE g.bt_project_id = :bt_project_id AND p.organization_id = :organization_id;";
   
-    SqlParameterSource namedParams = new SqlParamsBuilder(projectId, userId).build();
+    SqlParameterSource namedParams = new SqlParamsBuilder()
+        .withProject(projectId)
+        .withOrganization(user.getOrganizationId())
+        .build();
     
     return jdbc.query(sql, namedParams, (rs, rowNum) -> new GlobalVar()
         .setId(rs.getInt("zwl_globals_id"))
@@ -62,10 +72,12 @@ public class DaoGlobalVarProvider extends AbstractDaoProvider implements GlobalV
   
   @Override
   public void updateValue(String value, int globalVarId, int userId) {
+    User user = common.getUserOwnProps(userId);
     String sql = "UPDATE zwl_globals AS g SET value = :value\n" +
         "FROM bt_project AS p WHERE zwl_globals_id = :zwl_globals_id\n" +
-        "AND g.bt_project_id = p.bt_project_id AND p.zluser_id = :zluser_id;";
-    int result = jdbc.update(sql, new SqlParamsBuilder(userId)
+        "AND g.bt_project_id = p.bt_project_id AND p.organization_id = :organization_id;";
+    int result = jdbc.update(sql, new SqlParamsBuilder()
+        .withOrganization(user.getOrganizationId())
         .withOther("value", value)
         .withInteger("zwl_globals_id", globalVarId).build());
     CommonUtil.validateSingleRowDbCommit(result);
@@ -96,22 +108,27 @@ public class DaoGlobalVarProvider extends AbstractDaoProvider implements GlobalV
   
   @Override
   public void deleteGlobalVar(int globalVarId, int userId) {
+    User user = common.getUserOwnProps(userId);
     Preconditions.checkArgument(globalVarId > 0, "globalVarId is required");
     String sql = "DELETE FROM zwl_globals AS g\n" +
         "USING bt_project AS p WHERE zwl_globals_id = :zwl_globals_id\n" +
-        "AND g.bt_project_id = p.bt_project_id AND p.zluser_id = :zluser_id;";
-    int result = jdbc.update(sql, new SqlParamsBuilder(userId)
+        "AND g.bt_project_id = p.bt_project_id AND p.organization_id = :organization_id;";
+    int result = jdbc.update(sql, new SqlParamsBuilder()
+        .withOrganization(user.getOrganizationId())
         .withInteger("zwl_globals_id", globalVarId).build());
     CommonUtil.validateSingleRowDbCommit(result);
   }
   
   @Override
   public List<CapturedVariable> getCapturedGlobalVars(int buildId, int userId) {
+    User user = common.getUserOwnProps(userId);
     String sql = "SELECT key, value FROM bt_build_zwl_globals AS gv\n" +
         "INNER JOIN bt_build AS b ON (gv.bt_build_id = b.bt_build_id)\n" +
         "INNER JOIN bt_project AS p ON (b.bt_project_id = p.bt_project_id)\n" +
-        "WHERE gv.bt_build_id = :bt_build_id AND p.zluser_id = :zluser_id";
-    return jdbc.query(sql, new SqlParamsBuilder(userId).withInteger("bt_build_id", buildId).build(),
+        "WHERE gv.bt_build_id = :bt_build_id AND p.organization_id = :organization_id";
+    return jdbc.query(sql, new SqlParamsBuilder()
+            .withOrganization(user.getOrganizationId())
+            .withInteger("bt_build_id", buildId).build(),
         (rs, rowNum) -> new CapturedVariable()
             .setKey(rs.getString("key"))
             .setValue(rs.getString("value")));

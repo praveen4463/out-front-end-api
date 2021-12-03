@@ -3,6 +3,7 @@ package com.zylitics.front.dao;
 import com.google.common.base.Strings;
 import com.zylitics.front.model.BuildOutput;
 import com.zylitics.front.model.BuildOutputDetailsByVersion;
+import com.zylitics.front.model.User;
 import com.zylitics.front.provider.BuildOutputProvider;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
@@ -15,8 +16,11 @@ import java.util.Optional;
 @Repository
 public class DaoBuildOutputProvider extends AbstractDaoProvider implements BuildOutputProvider {
   
-  DaoBuildOutputProvider(NamedParameterJdbcTemplate jdbc) {
+  private final Common common;
+  
+  DaoBuildOutputProvider(NamedParameterJdbcTemplate jdbc, Common common) {
     super(jdbc);
+    this.common = common;
   }
   
   @Override
@@ -61,14 +65,16 @@ public class DaoBuildOutputProvider extends AbstractDaoProvider implements Build
       int buildId,
       int userId,
       @Nullable Integer versionId) {
+    User user = common.getUserOwnProps(userId);
     // a right join is used so that even if we push an error for some version without any output, we
     // still get that error and null output.
     String sql = "SELECT bt_test_version_id,\n" +
         "string_agg(output, '\n' ORDER BY bt_build_output_id) AS outputs, min(error) error\n" +
         "FROM bt_build_output RIGHT JOIN bt_build_status\n" +
         "USING (bt_build_id, bt_test_version_id)\n" +
-        "WHERE bt_build_id = :bt_build_id AND zluser_id = :zluser_id\n";
-    SqlParamsBuilder paramsBuilder = new SqlParamsBuilder(userId)
+        "WHERE bt_build_id = :bt_build_id AND organization_id = :organization_id\n";
+    SqlParamsBuilder paramsBuilder = new SqlParamsBuilder()
+        .withOrganization(user.getOrganizationId())
         .withInteger("bt_build_id", buildId);
     if (versionId != null) {
       sql += "AND bt_test_version_id = :bt_test_version_id\n";

@@ -3,6 +3,7 @@ package com.zylitics.front.dao;
 import com.google.common.base.Preconditions;
 import com.zylitics.front.model.Test;
 import com.zylitics.front.model.TestVersion;
+import com.zylitics.front.model.User;
 import com.zylitics.front.provider.TestProvider;
 import com.zylitics.front.util.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,14 +22,19 @@ public class DaoTestProvider extends AbstractDaoProvider implements TestProvider
   
   private final TransactionTemplate transactionTemplate;
   
+  private final Common common;
+  
   @Autowired
-  DaoTestProvider(NamedParameterJdbcTemplate jdbc, TransactionTemplate transactionTemplate) {
+  DaoTestProvider(NamedParameterJdbcTemplate jdbc, TransactionTemplate transactionTemplate,
+                  Common common) {
     super(jdbc);
     this.transactionTemplate = transactionTemplate;
+    this.common = common;
   }
   
   @Override
   public Test newTest(Test test, int userId) {
+    User user = common.getUserOwnProps(userId);
     String sql = "SELECT count(*) FROM bt_test WHERE name ILIKE lower(:name)\n" +
         "AND bt_file_id = :bt_file_id";
     int matchingTest = jdbc.query(sql, new SqlParamsBuilder()
@@ -42,9 +48,10 @@ public class DaoTestProvider extends AbstractDaoProvider implements TestProvider
       String sqlTest = "INSERT INTO bt_test (name, bt_file_id, create_date)\n" +
           "SELECT :name, bt_file_id, :create_date FROM bt_file AS f\n" +
           "INNER JOIN bt_project AS p ON (f.bt_project_id = p.bt_project_id)\n" +
-          "WHERE f.bt_file_id = :bt_file_id AND p.zluser_id = :zluser_id\n" +
+          "WHERE f.bt_file_id = :bt_file_id AND p.organization_id = :organization_id\n" +
           "RETURNING bt_test_id;";
-      int testId  = jdbc.query(sqlTest, new SqlParamsBuilder(userId)
+      int testId  = jdbc.query(sqlTest, new SqlParamsBuilder()
+          .withOrganization(user.getOrganizationId())
           .withVarchar("name", test.getName())
           .withInteger("bt_file_id", test.getFileId())
           .withCreateDate().build(), CommonUtil.getSingleInt()).get(0);
@@ -72,6 +79,7 @@ public class DaoTestProvider extends AbstractDaoProvider implements TestProvider
   @Override
   public void renameTest(Test test, int userId) {
     Preconditions.checkArgument(test.getId() > 0, "testId is required");
+    User user = common.getUserOwnProps(userId);
     
     String sql = "SELECT count(*) FROM bt_test WHERE bt_test_id <> :bt_test_id\n" +
         "AND name ILIKE lower(:name) AND bt_file_id = :bt_file_id;";
@@ -85,8 +93,9 @@ public class DaoTestProvider extends AbstractDaoProvider implements TestProvider
     sql = "UPDATE bt_test AS t SET name = :name\n" +
         "FROM bt_file AS f INNER JOIN bt_project p ON (f.bt_project_id = p.bt_project_id)\n" +
         "WHERE bt_test_id = :bt_test_id AND t.bt_file_id = f.bt_file_id\n" +
-        "AND p.zluser_id = :zluser_id;";
-    int result = jdbc.update(sql, new SqlParamsBuilder(userId)
+        "AND p.organization_id = :organization_id;";
+    int result = jdbc.update(sql, new SqlParamsBuilder()
+        .withOrganization(user.getOrganizationId())
         .withVarchar("name", test.getName())
         .withInteger("bt_test_id", test.getId()).build());
     CommonUtil.validateSingleRowDbCommit(result);
@@ -94,12 +103,14 @@ public class DaoTestProvider extends AbstractDaoProvider implements TestProvider
   
   @Override
   public void deleteTest(int testId, int userId) {
+    User user = common.getUserOwnProps(userId);
     // This will delete all versions via cascade
     String sql = "DELETE FROM bt_test AS t\n" +
         "USING bt_file AS f INNER JOIN bt_project AS p ON (f.bt_project_id = p.bt_project_id)\n" +
         "WHERE bt_test_id = :bt_test_id AND t.bt_file_id = f.bt_file_id\n" +
-        "AND p.zluser_id = :zluser_id;";
-    int result = jdbc.update(sql, new SqlParamsBuilder(userId)
+        "AND p.organization_id = :organization_id;";
+    int result = jdbc.update(sql, new SqlParamsBuilder()
+        .withOrganization(user.getOrganizationId())
         .withInteger("bt_test_id", testId).build());
     CommonUtil.validateSingleRowDbCommit(result);
   }
