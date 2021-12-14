@@ -93,7 +93,7 @@ public class DaoUserProvider extends AbstractDaoProvider implements UserProvider
     if (ownDetailsOnly) {
       sql += "FROM zluser AS u WHERE zluser_id = :zluser_id";
     } else {
-      sql += ", o.name AS org_name, p.name AS plan_name, plan_type, p.display_name,\n" +
+      sql += ", o.name AS org_name, api_key, p.name AS plan_name, plan_type, p.display_name,\n" +
           "minutes, total_parallel, coalesce(minutes_consumed, 0) AS minutes_consumed,\n" +
           "billing_cycle_start AT TIME ZONE 'UTC' AS billing_cycle_start,\n" +
           "billing_cycle_planned_end AT TIME ZONE 'UTC' AS billing_cycle_planned_end\n" +
@@ -116,7 +116,8 @@ public class DaoUserProvider extends AbstractDaoProvider implements UserProvider
             .setEmailVerificationId(rs.getLong("email_verification_id"));
         if (!ownDetailsOnly) {
           u.setOrganization(new Organization()
-                .setName(rs.getString("org_name")))
+                .setName(rs.getString("org_name"))
+                .setApiKey(rs.getString("api_key")))
             .setUsersPlan(new UsersPlan()
                 .setPlanName(rs.getString("plan_name"))
                 .setPlanType(PlanType.valueOf(rs.getString("plan_type")))

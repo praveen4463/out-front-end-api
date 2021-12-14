@@ -6,6 +6,8 @@ public class Organization {
   
   private String name;
   
+  private String apiKey;
+  
   public int getId() {
     return id;
   }
@@ -21,6 +23,15 @@ public class Organization {
   
   public Organization setName(String name) {
     this.name = name;
+    return this;
+  }
+  
+  public String getApiKey() {
+    return apiKey;
+  }
+  
+  public Organization setApiKey(String apiKey) {
+    this.apiKey = apiKey;
     return this;
   }
 }

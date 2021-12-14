@@ -155,3 +155,11 @@ Enhancements
 
 1. Added team invite.
 2. Upgraded zwl to 0.6.3
+
+## v0.3.21
+
+Enhancements
+
+### Enhancements
+
+1. Added api key api

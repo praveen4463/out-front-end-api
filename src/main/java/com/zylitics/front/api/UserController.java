@@ -240,6 +240,19 @@ public class UserController extends AbstractController {
     return ResponseEntity.ok().build();
   }
   
+  @GetMapping("/current/getApiKey")
+  public ResponseEntity<?> getApiKey(
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo) {
+    int userId = getUserId(userInfo);
+    User user = userProvider.getUser(userId)
+        .orElseThrow(() -> new UnauthorizedException("User not found"));
+    Preconditions.checkArgument(user != null && user.getOrganization() != null);
+    if (user.getRole() != Role.ADMIN) {
+      return sendError(HttpStatus.UNAUTHORIZED, "You're not authorized to view this page.");
+    }
+    return ResponseEntity.ok(user.getOrganization().getApiKey());
+  }
+  
   static class NewUserResponse {
     
     private User user;

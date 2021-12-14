@@ -28,10 +28,13 @@ public class DaoOrganizationProvider extends AbstractDaoProvider implements Orga
   
   @Override
   public Optional<Organization> getOrganization(int id) {
-    String sql = "SELECT name FROM organization WHERE organization_id = :organization_id";
+    String sql = "SELECT name, api_key FROM organization WHERE organization_id = :organization_id";
     List<Organization> organizations = jdbc.query(sql, new SqlParamsBuilder()
         .withInteger("organization_id", id).build(), (rs, rowNum) ->
-        new Organization().setId(id).setName(rs.getString("name")));
+        new Organization()
+            .setId(id)
+            .setName(rs.getString("name"))
+            .setApiKey(rs.getString("api_key")));
     if (organizations.size() == 0) {
       return Optional.empty();
     }
@@ -40,13 +43,14 @@ public class DaoOrganizationProvider extends AbstractDaoProvider implements Orga
   
   @Override
   public Organization getOrganizationOfUser(int userId) {
-    String sql = "SELECT organization_id, o.name FROM zluser AS z\n" +
+    String sql = "SELECT organization_id, o.name, api_key FROM zluser AS z\n" +
         "INNER JOIN organization AS o ON (z.organization_id = o.organization_id)\n" +
         "WHERE zluser_id = :zluser_id";
     List<Organization> organizations = jdbc.query(sql, new SqlParamsBuilder(userId).build(),
         (rs, rowNum) -> new Organization()
             .setId(rs.getInt("organization_id"))
-            .setName(rs.getString("name")));
+            .setName(rs.getString("name"))
+            .setApiKey(rs.getString("api_key")));
     return organizations.get(0);
   }
   

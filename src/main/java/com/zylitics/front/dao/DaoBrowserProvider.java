@@ -15,6 +15,7 @@ public class DaoBrowserProvider extends AbstractDaoProvider implements BrowserPr
     super(jdbc);
   }
   
+  // TODO: this is not ideal, we want to update type of display_version and then use ordering
   @Override
   public List<BrowserNameToVersions> getBrowsers(@Nullable String platform) {
     SqlParamsBuilder paramsBuilder = new SqlParamsBuilder();
