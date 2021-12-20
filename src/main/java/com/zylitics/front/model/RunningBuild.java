@@ -10,6 +10,8 @@ public class RunningBuild {
   
   private String shotBucket;
   
+  private boolean shotsAvailable;
+  
   private String os;
   
   private String browserName;
@@ -47,6 +49,15 @@ public class RunningBuild {
   
   public RunningBuild setShotBucket(String shotBucket) {
     this.shotBucket = shotBucket;
+    return this;
+  }
+  
+  public boolean isShotsAvailable() {
+    return shotsAvailable;
+  }
+  
+  public RunningBuild setShotsAvailable(boolean shotsAvailable) {
+    this.shotsAvailable = shotsAvailable;
     return this;
   }
   

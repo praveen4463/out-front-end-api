@@ -163,3 +163,11 @@ Enhancements
 ### Enhancements
 
 1. Added api key api
+
+## v0.3.22
+
+Enhancements
+
+### Enhancements
+
+1. UI support for shots and driver logs preferences 

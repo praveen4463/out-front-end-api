@@ -36,6 +36,8 @@ public class CompletedBuildDetails {
   
   private boolean elemShotsAvailable;
   
+  private boolean shotsAvailable;
+  
   private List<TestVersionDetails> testVersionDetailsList;
   
   public int getBuildId() {
@@ -179,6 +181,15 @@ public class CompletedBuildDetails {
   
   public CompletedBuildDetails setElemShotsAvailable(boolean elemShotsAvailable) {
     this.elemShotsAvailable = elemShotsAvailable;
+    return this;
+  }
+  
+  public boolean isShotsAvailable() {
+    return shotsAvailable;
+  }
+  
+  public CompletedBuildDetails setShotsAvailable(boolean shotsAvailable) {
+    this.shotsAvailable = shotsAvailable;
     return this;
   }
   

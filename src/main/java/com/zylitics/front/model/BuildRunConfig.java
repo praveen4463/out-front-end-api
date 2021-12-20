@@ -23,6 +23,10 @@ public class BuildRunConfig {
   @NotBlank
   private String timezone;
   
+  private boolean captureShots;
+  
+  private boolean captureDriverLogs;
+  
   private Map<String, Integer> selectedBuildVarIdPerKey;
   
   private RunnerPreferences runnerPreferences;
@@ -66,6 +70,24 @@ public class BuildRunConfig {
   
   public BuildRunConfig setTimezone(String timezone) {
     this.timezone = timezone;
+    return this;
+  }
+  
+  public boolean isCaptureShots() {
+    return captureShots;
+  }
+  
+  public BuildRunConfig setCaptureShots(boolean captureShots) {
+    this.captureShots = captureShots;
+    return this;
+  }
+  
+  public boolean isCaptureDriverLogs() {
+    return captureDriverLogs;
+  }
+  
+  public BuildRunConfig setCaptureDriverLogs(boolean captureDriverLogs) {
+    this.captureDriverLogs = captureDriverLogs;
     return this;
   }
   

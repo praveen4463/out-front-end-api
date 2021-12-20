@@ -34,6 +34,10 @@ public class Build {
   
   private String shotBucketSessionStorage;
   
+  private boolean captureShots;
+  
+  private boolean captureDriverLogs;
+  
   private boolean abortOnFailure;
   
   private boolean aetKeepSingleWindow;
@@ -193,6 +197,24 @@ public class Build {
   
   public Build setShotBucketSessionStorage(String shotBucketSessionStorage) {
     this.shotBucketSessionStorage = shotBucketSessionStorage;
+    return this;
+  }
+  
+  public boolean isCaptureShots() {
+    return captureShots;
+  }
+  
+  public Build setCaptureShots(boolean captureShots) {
+    this.captureShots = captureShots;
+    return this;
+  }
+  
+  public boolean isCaptureDriverLogs() {
+    return captureDriverLogs;
+  }
+  
+  public Build setCaptureDriverLogs(boolean captureDriverLogs) {
+    this.captureDriverLogs = captureDriverLogs;
     return this;
   }
   

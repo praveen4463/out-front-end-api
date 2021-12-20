@@ -26,7 +26,8 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
   private static final String BUILD_INSERT_STM =
       "INSERT INTO bt_build\n" +
       "(build_key, name, server_screen_size, server_timezone_with_dst,\n" +
-      "shot_bucket_session_storage, abort_on_failure, aet_keep_single_window,\n" +
+      "shot_bucket_session_storage, abort_on_failure,\n" +
+      "capture_shots, capture_driver_logs, aet_keep_single_window,\n" +
       "aet_update_url_blank, aet_reset_timeouts, aet_delete_all_cookies, bt_project_id,\n" +
       "source_type, bt_build_request_id, create_date)\n";
   
@@ -91,7 +92,8 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
                                     int projectId) {
     String sql = BUILD_INSERT_STM +
         "VALUES (:build_key, :name, :server_screen_size, :server_timezone_with_dst,\n" +
-        ":shot_bucket_session_storage, :abort_on_failure, :aet_keep_single_window,\n" +
+        ":shot_bucket_session_storage, :abort_on_failure,\n" +
+        ":capture_shots, :capture_driver_logs, :aet_keep_single_window,\n" +
         ":aet_update_url_blank, :aet_reset_timeouts, :aet_delete_all_cookies, :bt_project_id,\n" +
         ":source_type, :bt_build_request_id, :create_date) RETURNING bt_build_id";
     RunnerPreferences runnerPreferences = config.getRunnerPreferences();
@@ -102,6 +104,8 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
         .withOther("server_timezone_with_dst", config.getTimezone())
         .withVarchar("shot_bucket_session_storage", user.getShotBucketSessionStorage())
         .withBoolean("abort_on_failure", runnerPreferences.isAbortOnFailure())
+        .withBoolean("capture_shots", config.isCaptureShots())
+        .withBoolean("capture_driver_logs", config.isCaptureDriverLogs())
         .withBoolean("aet_keep_single_window", runnerPreferences.isAetKeepSingleWindow())
         .withBoolean("aet_update_url_blank", runnerPreferences.isAetUpdateUrlBlank())
         .withBoolean("aet_reset_timeouts", runnerPreferences.isAetResetTimeouts())
@@ -144,7 +148,8 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
     // rather than from old build as user may have changed location changing their default bucket.
     String sql = BUILD_INSERT_STM +
         "SELECT :build_key, name, server_screen_size, server_timezone_with_dst,\n" +
-        ":shot_bucket_session_storage, abort_on_failure, aet_keep_single_window,\n" +
+        ":shot_bucket_session_storage, abort_on_failure,\n" +
+        "capture_shots, capture_driver_logs, aet_keep_single_window,\n" +
         "aet_update_url_blank, aet_reset_timeouts, aet_delete_all_cookies, bt_project_id,\n" +
         ":source_type, :bt_build_request_id, :create_date\n" +
         "FROM bt_build WHERE bt_build_id = :bt_build_id \n" +
@@ -180,6 +185,7 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
         "end_date AT TIME ZONE 'UTC' AS end_date,\n" +
         "all_done_date AT TIME ZONE 'UTC' AS all_done_date,\n" +
         "final_status, error, shot_bucket_session_storage, abort_on_failure,\n" +
+        "capture_shots, capture_driver_logs,\n" +
         "aet_keep_single_window, aet_update_url_blank, aet_reset_timeouts,\n" +
         "aet_delete_all_cookies, bt_project_id, source_type, bt_build_request_id,\n" +
         "bu.create_date AT TIME ZONE 'UTC' AS create_date\n" +
@@ -213,6 +219,8 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
                 .setError(rs.getString("error"))
                 .setShotBucketSessionStorage(rs.getString("shot_bucket_session_storage"))
                 .setAbortOnFailure(rs.getBoolean("abort_on_failure"))
+                .setCaptureShots(rs.getBoolean("capture_shots"))
+                .setCaptureDriverLogs(rs.getBoolean("capture_driver_logs"))
                 .setAetKeepSingleWindow(rs.getBoolean("aet_keep_single_window"))
                 .setAetUpdateUrlBlank(rs.getBoolean("aet_update_url_blank"))
                 .setAetResetTimeouts(rs.getBoolean("aet_reset_timeouts"))
@@ -443,7 +451,8 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
         "EXTRACT(EPOCH FROM b.end_date) - EXTRACT(EPOCH FROM b.start_date) test_time_sec,\n" +
         "bc.name caps_name, bc.server_os, bc.wd_browser_name, bc.wd_browser_version,\n" +
         "b.server_screen_size, b.server_timezone_with_dst, b.shot_bucket_session_storage,\n" +
-        "b.all_done_date AT TIME ZONE 'UTC' AS all_done_date FROM bt_build AS b\n" +
+        "b.all_done_date AT TIME ZONE 'UTC' AS all_done_date, b.capture_shots\n" +
+        "FROM bt_build AS b\n" +
         "INNER JOIN bt_build_captured_capabilities AS bc ON (b.bt_build_id = bc.bt_build_id)\n" +
         "INNER JOIN bt_project AS p ON (b.bt_project_id = p.bt_project_id)\n" +
         "WHERE b.bt_build_id = :bt_build_id AND p.organization_id = :organization_id\n" +
@@ -466,7 +475,8 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
                 .setResolution(rs.getString("server_screen_size"))
                 .setTimezone(rs.getString("server_timezone_with_dst"))
                 .setShotBucket(rs.getString("shot_bucket_session_storage"))
-                .setAllDoneDate(CommonUtil.getEpochSecsOrNullFromSqlTimestamp(rs, "all_done_date")));
+                .setAllDoneDate(CommonUtil.getEpochSecsOrNullFromSqlTimestamp(rs, "all_done_date"))
+                .setShotsAvailable(rs.getBoolean("capture_shots")));
     if (completedBuildDetailsList.size() == 0) {
       return Optional.empty();
     }
@@ -494,7 +504,7 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
   public List<RunningBuild> getRunningBuilds(Integer after, int projectId, int userId) {
     User user = common.getUserOwnProps(userId);
     String sql = "SELECT bt_build_id, build_key, bu.name, shot_bucket_session_storage,\n" +
-        "server_os, wd_browser_name\n" +
+        "server_os, capture_shots, wd_browser_name\n" +
         "FROM bt_build bu JOIN bt_build_captured_capabilities USING (bt_build_id)" +
         "JOIN bt_project USING (bt_project_id)\n" +
         "WHERE ((start_date IS NOT NULL AND all_done_date IS NULL)\n" +
@@ -514,6 +524,7 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
             .setBuildKey(rs.getString("build_key"))
             .setBuildName(rs.getString("name"))
             .setShotBucket(rs.getString("shot_bucket_session_storage"))
+            .setShotsAvailable(rs.getBoolean("capture_shots"))
             .setOs(rs.getString("server_os"))
             .setBrowserName(rs.getString("wd_browser_name")));
   }
