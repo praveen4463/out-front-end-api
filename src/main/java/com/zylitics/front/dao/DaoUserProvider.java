@@ -2,6 +2,7 @@ package com.zylitics.front.dao;
 
 import com.google.common.base.Strings;
 import com.zylitics.front.model.*;
+import com.zylitics.front.provider.EmailPreferenceProvider;
 import com.zylitics.front.provider.OrganizationProvider;
 import com.zylitics.front.provider.QuotaProvider;
 import com.zylitics.front.provider.UserProvider;
@@ -25,15 +26,19 @@ public class DaoUserProvider extends AbstractDaoProvider implements UserProvider
   
   private final OrganizationProvider organizationProvider;
   
+  private final EmailPreferenceProvider emailPreferenceProvider;
+  
   @Autowired
   DaoUserProvider(NamedParameterJdbcTemplate jdbc,
                   TransactionTemplate transactionTemplate,
                   QuotaProvider quotaProvider,
-                  OrganizationProvider organizationProvider) {
+                  OrganizationProvider organizationProvider,
+                  EmailPreferenceProvider emailPreferenceProvider) {
     super(jdbc);
     this.transactionTemplate = transactionTemplate;
     this.quotaProvider = quotaProvider;
     this.organizationProvider = organizationProvider;
+    this.emailPreferenceProvider = emailPreferenceProvider;
   }
   
   @Override
@@ -74,6 +79,10 @@ public class DaoUserProvider extends AbstractDaoProvider implements UserProvider
       if (planName != null) {
         quotaProvider.newQuota(planName, organizationId);
       }
+      
+      // Create mandatory records for this user
+      emailPreferenceProvider.newEmailPreference(id);
+      
       return id;
     });
     Objects.requireNonNull(userId);

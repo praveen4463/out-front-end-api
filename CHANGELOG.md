@@ -171,3 +171,11 @@ Enhancements
 ### Enhancements
 
 1. UI support for shots and driver logs preferences 
+
+## v0.3.23
+
+Enhancements
+
+### Enhancements
+
+1. Creating a new email preference record for every new user.
