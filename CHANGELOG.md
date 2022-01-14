@@ -179,3 +179,12 @@ Enhancements
 ### Enhancements
 
 1. Creating a new email preference record for every new user.
+
+## v0.3.24
+
+Enhancements
+
+### Enhancements
+
+1. Added mobile emulation in build capability.
+2. Bumped zwl to 0.6.4

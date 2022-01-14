@@ -22,7 +22,7 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
   private static final String CAPTURED_CAPS_INSERT_STM =
       "INSERT INTO bt_build_captured_capabilities (bt_build_id, name,\n" +
       "shot_take_test_shot, server_os, wd_browser_name,\n" +
-      "wd_browser_version, wd_platform_name, wd_accept_insecure_certs,\n" +
+      "wd_browser_version, wd_platform_name, wd_me_device_resolution, wd_accept_insecure_certs,\n" +
       "wd_page_load_strategy, wd_set_window_rect, wd_timeouts_script,\n" +
       "wd_timeouts_page_load, wd_timeouts_element_access, wd_strict_file_interactability,\n" +
       "wd_unhandled_prompt_behavior, wd_ie_element_scroll_behavior,\n" +
@@ -35,7 +35,7 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
   private static final String CAPTURED_CAPS_SELECT_FIELDS =
       "SELECT :bt_build_id, name,\n" +
       "shot_take_test_shot, server_os, wd_browser_name,\n" +
-      "wd_browser_version, wd_platform_name, wd_accept_insecure_certs,\n" +
+      "wd_browser_version, wd_platform_name, wd_me_device_resolution, wd_accept_insecure_certs,\n" +
       "wd_page_load_strategy, wd_set_window_rect, wd_timeouts_script,\n" +
       "wd_timeouts_page_load, wd_timeouts_element_access, wd_strict_file_interactability,\n" +
       "wd_unhandled_prompt_behavior, wd_ie_element_scroll_behavior,\n" +
@@ -69,7 +69,8 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
     }
     
     sql = "INSERT INTO bt_build_capability (name, server_os, wd_browser_name,\n" +
-        "wd_browser_version, wd_platform_name, wd_accept_insecure_certs, wd_timeouts_script,\n" +
+        "wd_browser_version, wd_platform_name, wd_me_device_resolution,\n" +
+        "wd_accept_insecure_certs, wd_timeouts_script,\n" +
         "wd_timeouts_page_load, wd_timeouts_element_access, wd_strict_file_interactability,\n" +
         "wd_unhandled_prompt_behavior, wd_ie_element_scroll_behavior,\n" +
         "wd_ie_enable_persistent_hovering, wd_ie_require_window_focus,\n" +
@@ -78,7 +79,8 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
         "wd_chrome_enable_network, wd_chrome_enable_page, wd_firefox_log_level,\n" +
         "wd_brw_start_maximize, zluser_id, organization_id, create_date) VALUES\n" +
         "(:name, :server_os, :wd_browser_name, :wd_browser_version,\n" +
-        ":wd_platform_name, :wd_accept_insecure_certs, :wd_timeouts_script,\n" +
+        ":wd_platform_name, :wd_me_device_resolution,\n" +
+        ":wd_accept_insecure_certs, :wd_timeouts_script,\n" +
         ":wd_timeouts_page_load, :wd_timeouts_element_access, :wd_strict_file_interactability,\n" +
         ":wd_unhandled_prompt_behavior, :wd_ie_element_scroll_behavior,\n" +
         ":wd_ie_enable_persistent_hovering, :wd_ie_require_window_focus,\n" +
@@ -142,6 +144,7 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
         "wd_browser_name = :wd_browser_name,\n" +
         "wd_browser_version = :wd_browser_version,\n" +
         "wd_platform_name = :wd_platform_name,\n" +
+        "wd_me_device_resolution = :wd_me_device_resolution,\n" +
         "wd_accept_insecure_certs = :wd_accept_insecure_certs,\n" +
         "wd_timeouts_script = :wd_timeouts_script,\n" +
         "wd_timeouts_page_load = :wd_timeouts_page_load,\n" +
@@ -194,6 +197,7 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
         "wd_browser_name,\n" +
         "wd_browser_version,\n" +
         "wd_platform_name,\n" +
+        "wd_me_device_resolution,\n" +
         "wd_accept_insecure_certs,\n" +
         "wd_timeouts_script,\n" +
         "wd_timeouts_page_load,\n" +
@@ -226,6 +230,7 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
             .setWdBrowserName(rs.getString("wd_browser_name"))
             .setWdBrowserVersion(rs.getString("wd_browser_version"))
             .setWdPlatformName(rs.getString("wd_platform_name"))
+            .setWdMeDeviceResolution(rs.getString("wd_me_device_resolution"))
             .setWdAcceptInsecureCerts(rs.getBoolean("wd_accept_insecure_certs"))
             .setWdTimeoutsScript(rs.getInt("wd_timeouts_script"))
             .setWdTimeoutsPageLoad(rs.getInt("wd_timeouts_page_load"))
@@ -284,6 +289,7 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
         .withVarchar("wd_browser_name", buildCapability.getWdBrowserName())
         .withVarchar("wd_browser_version", buildCapability.getWdBrowserVersion())
         .withVarchar("wd_platform_name", buildCapability.getWdPlatformName())
+        .withVarchar("wd_me_device_resolution", buildCapability.getWdMeDeviceResolution())
         .withBoolean("wd_accept_insecure_certs", buildCapability.isWdAcceptInsecureCerts())
         .withInteger("wd_timeouts_script", buildCapability.getWdTimeoutsScript())
         .withInteger("wd_timeouts_page_load", buildCapability.getWdTimeoutsPageLoad())
@@ -315,7 +321,8 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
   public Optional<BuildCapability> getCapturedCapability(int buildId, int userId) {
     User user = common.getUserOwnProps(userId);
     String sql = "SELECT bc.name, server_os, wd_browser_name,\n" +
-        "wd_browser_version, wd_platform_name, wd_accept_insecure_certs, wd_timeouts_script,\n" +
+        "wd_browser_version, wd_platform_name, wd_me_device_resolution,\n" +
+        "wd_accept_insecure_certs, wd_timeouts_script,\n" +
         "wd_timeouts_page_load, wd_timeouts_element_access, wd_strict_file_interactability,\n" +
         "wd_unhandled_prompt_behavior, wd_ie_element_scroll_behavior,\n" +
         "wd_ie_enable_persistent_hovering, wd_ie_require_window_focus,\n" +
@@ -336,6 +343,7 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider implements
                 .setWdBrowserName(rs.getString("wd_browser_name"))
                 .setWdBrowserVersion(rs.getString("wd_browser_version"))
                 .setWdPlatformName(rs.getString("wd_platform_name"))
+                .setWdMeDeviceResolution(rs.getString("wd_me_device_resolution"))
                 .setWdAcceptInsecureCerts(rs.getBoolean("wd_accept_insecure_certs"))
                 .setWdTimeoutsScript(rs.getInt("wd_timeouts_script"))
                 .setWdTimeoutsPageLoad(rs.getInt("wd_timeouts_page_load"))
