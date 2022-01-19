@@ -18,6 +18,8 @@ public class BuildStatus {
   
   private String errorToPos;
   
+  private String urlUponError;
+  
   public TestStatus getStatus() {
     return status;
   }
@@ -78,6 +80,15 @@ public class BuildStatus {
   
   public BuildStatus setErrorToPos(String errorToPos) {
     this.errorToPos = errorToPos;
+    return this;
+  }
+  
+  public String getUrlUponError() {
+    return urlUponError;
+  }
+  
+  public BuildStatus setUrlUponError(String urlUponError) {
+    this.urlUponError = urlUponError;
     return this;
   }
 }

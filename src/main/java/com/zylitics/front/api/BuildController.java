@@ -368,6 +368,25 @@ public class BuildController extends AbstractController {
     return ResponseEntity.ok().build();
   }
   
+  @GetMapping("/builds/{buildId}/versions/{versionId}/getCompletedVersionStatus")
+  public ResponseEntity<?> getBuildStatusOutput(
+      @PathVariable @Min(1) int buildId,
+      @PathVariable @Min(1) int versionId,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo
+  ) {
+    Optional<BuildStatus> buildStatusOptional = buildStatusProvider.getBuildStatus(buildId,
+        versionId, getUserId(userInfo));
+    if (!buildStatusOptional.isPresent()) {
+      return sendError(HttpStatus.BAD_REQUEST, "No build status found");
+    }
+    BuildStatus buildStatus = buildStatusOptional.get();
+    CompletedVersionStatus completedVersionStatus = new CompletedVersionStatus()
+        .setStatus(buildStatus.getStatus())
+        .setError(buildStatus.getError())
+        .setUrlUponError(buildStatus.getUrlUponError());
+    return ResponseEntity.ok(completedVersionStatus);
+  }
+  
   @GetMapping("/builds/{buildId}/versions/{versionId}/getBuildStatusOutput")
   public ResponseEntity<BuildStatusOutput> getBuildStatusOutput(
       @PathVariable @Min(1) int buildId,

@@ -188,3 +188,12 @@ Enhancements
 
 1. Added mobile emulation in build capability.
 2. Bumped zwl to 0.6.4
+
+## v0.3.25
+
+Enhancements
+
+### Enhancements
+
+1. Added new api endpoint for getting completed version status
+2. Incorporate url_on_error in BuildStatus

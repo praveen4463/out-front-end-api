@@ -27,7 +27,7 @@ public class DaoBuildStatusProvider extends AbstractDaoProvider implements Build
     String sql = "SELECT status, zwl_executing_line,\n" +
         "start_date AT TIME ZONE 'UTC' AS start_date,\n" +
         "end_date AT TIME ZONE 'UTC' AS end_date,\n" +
-        "error, error_from_pos, error_to_pos FROM bt_build_status\n" +
+        "error, error_from_pos, error_to_pos, url_upon_error FROM bt_build_status\n" +
         "WHERE bt_build_id = :bt_build_id AND bt_test_version_id = :bt_test_version_id\n" +
         "AND organization_id = :organization_id";
     List<BuildStatus> bs = jdbc.query(sql, new SqlParamsBuilder()
@@ -41,7 +41,8 @@ public class DaoBuildStatusProvider extends AbstractDaoProvider implements Build
             .setEndDate(DateTimeUtil.sqlTimestampToLocal(rs.getTimestamp("end_date")))
             .setError(rs.getString("error"))
             .setErrorFromPos(rs.getString("error_from_pos"))
-            .setErrorToPos(rs.getString("error_to_pos")));
+            .setErrorToPos(rs.getString("error_to_pos"))
+            .setUrlUponError(rs.getString("url_upon_error")));
     if (bs.size() == 0) {
       return Optional.empty();
     }

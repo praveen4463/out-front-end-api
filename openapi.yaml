@@ -10,7 +10,7 @@ info:
   title: Zylitics front end api
   # This version no. is just to showing in the console and has no affect on functionality, although it should be
   # updated whenever production version is updated.
-  version: 0.3.24
+  version: 0.3.25
 host: front.api.zylitics.io
 x-google-endpoints:
   - name: front.api.zylitics.io
@@ -993,6 +993,22 @@ paths:
           description: Unexpected exception
           schema:
             $ref: '#/definitions/ApiError'
+  /builds/{buildId}/versions/{versionId}/getCompletedVersionStatus:
+    get:
+      description: Gets versions's status post completion
+      operationId: getCompletedVersionStatus
+      parameters:
+        - $ref: '#/parameters/buildId'
+        - $ref: '#/parameters/versionId'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/CompletedVersionStatus'
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
   /builds/{buildId}/versions/{versionId}/getBuildStatusOutput:
     get:
       description: Gets build's status and output
@@ -1469,6 +1485,16 @@ definitions:
     type: object
     properties:
       newEmail:
+        type: string
+  CompletedVersionStatus:
+    type: object
+    properties:
+      status:
+        type: string
+        enum: [ RUNNING, ERROR, STOPPED, ABORTED, SUCCESS ]
+      error:
+        type: string
+      urlUponError:
         type: string
   BuildStatusOutput:
     type: object
