@@ -197,3 +197,13 @@ Enhancements
 
 1. Added new api endpoint for getting completed version status
 2. Incorporate url_on_error in BuildStatus
+
+## v0.3.26
+
+Enhancements
+
+### Enhancements
+
+1. Dropped one of the vm zone and kept just one for now. This is done for keeping the cost low so that
+   if one user is currently developing in the app, we keep only one VM running. When starting a new 
+   VM, the other zone will still be reattempted in provisioner if it fails in the given zone.
