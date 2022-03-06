@@ -215,3 +215,11 @@ Enhancements
 ### Enhancements
 
 1. Bumped zwl to 0.6.5
+
+## v0.3.28
+
+Enhancements
+
+### Enhancements
+
+1. Bumped zwl to 0.6.7
