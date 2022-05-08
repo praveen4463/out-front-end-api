@@ -96,6 +96,21 @@ paths:
           description: Unexpected exception
           schema:
             $ref: '#/definitions/ApiError'
+  /projects/{projectId}/downloadProjectFiles:
+    patch:
+      description: Downloads files for a project as a compressed package
+      operationId: downloadProjectFiles
+      produces:
+        - application/zip
+      parameters:
+        - $ref: '#/parameters/projectId'
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
   /projects/{projectId}/renameProject:
     patch:
       description: Gets project for given id

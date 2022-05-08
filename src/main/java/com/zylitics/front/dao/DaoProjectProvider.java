@@ -2,10 +2,12 @@ package com.zylitics.front.dao;
 
 import com.google.common.base.Preconditions;
 import com.zylitics.front.model.Project;
+import com.zylitics.front.model.ProjectDownloadableFile;
 import com.zylitics.front.model.User;
 import com.zylitics.front.provider.ProjectProvider;
 import com.zylitics.front.util.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.SqlParameterValue;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -110,6 +112,44 @@ class DaoProjectProvider extends AbstractDaoProvider implements ProjectProvider 
     String sql = "UPDATE bt_project SET name = :name WHERE bt_project_id = :bt_project_id\n" +
         "AND organization_id = :organization_id";
     CommonUtil.validateSingleRowDbCommit(jdbc.update(sql, params));
+  }
+  
+  @Override
+  public List<ProjectDownloadableFile> getProjectDownloadableFiles(int projectId, int userId) {
+    User user = common.getUserOwnProps(userId);
+    String sql = "SELECT f.name file_name, t.name test_name, v.code\n" +
+        "FROM bt_file f\n" +
+        "JOIN bt_test t USING (bt_file_id)\n" +
+        "JOIN bt_test_version v USING (bt_test_id)\n" +
+        "JOIN bt_project p USING (bt_project_id)\n" +
+        "WHERE p.bt_project_id = :bt_project_id AND v.is_current = true\n" +
+        "AND organization_id = :organization_id\n" +
+        "ORDER BY f.name, t.name";
+    SqlParameterSource params = new SqlParamsBuilder()
+        .withProject(projectId)
+        .withOrganization(user.getOrganizationId())
+        .build();
+    Map<String, List<ProjectDownloadableFile.Test>> fileToTests = new HashMap<>();
+    jdbc.query(sql, params, rs -> {
+      List<ProjectDownloadableFile.Test> tests;
+      
+      String fileName = rs.getString("file_name");
+      if (!fileToTests.containsKey(fileName)) {
+        tests = new ArrayList<>();
+        fileToTests.put(fileName, tests);
+      } else {
+        tests = fileToTests.get(fileName);
+      }
+      
+      tests.add(new ProjectDownloadableFile.Test()
+          .setTestName(rs.getString("test_name"))
+          .setCode(rs.getString("code")));
+    });
+  
+    List<ProjectDownloadableFile> files = new ArrayList<>();
+    fileToTests.keySet().forEach(key ->
+        files.add(new ProjectDownloadableFile().setName(key).setTests(fileToTests.get(key))));
+    return files;
   }
   
   @Override

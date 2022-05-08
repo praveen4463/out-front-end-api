@@ -3,18 +3,24 @@ package com.zylitics.front.api;
 import com.google.common.base.Preconditions;
 import com.zylitics.front.SecretsManager;
 import com.zylitics.front.model.Project;
+import com.zylitics.front.model.ProjectDownloadableFile;
 import com.zylitics.front.provider.ProjectProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -68,6 +74,30 @@ public class ProjectController extends AbstractController {
     Optional<Project> projectOptional = projectProvider.getProject(projectId, userId);
     Preconditions.checkArgument(projectOptional.isPresent(), "Invalid projectId " + projectId);
     return ResponseEntity.ok(projectOptional.get());
+  }
+  
+  @GetMapping("/{projectId}/downloadProjectFiles")
+  public ResponseEntity<FileSystemResource> downloadProjectFiles(
+      @PathVariable @Min(1) int projectId,
+      @RequestHeader(USER_INFO_REQ_HEADER) String userInfo) throws IOException {
+    int userId = getUserId(userInfo);
+    Optional<Project> projectOptional = projectProvider.getProject(projectId, userId);
+    Preconditions.checkArgument(projectOptional.isPresent(), "Invalid projectId " + projectId);
+    
+    List<ProjectDownloadableFile> files =
+        projectProvider.getProjectDownloadableFiles(projectId, userId);
+    if (files.size() == 0) {
+      return ResponseEntity.ok().build();
+    }
+    File zipFile = new ZwlFileIO().composeAndPackageProjectFiles(files).toFile();
+  
+    HttpHeaders responseHeaders = new HttpHeaders();
+    responseHeaders.setContentType(MediaType.parseMediaType("application/zip"));
+    responseHeaders.setContentLength(zipFile.length());
+    responseHeaders.setContentDispositionFormData("attachment",
+        projectOptional.get().getName() + ".zip");
+    
+    return new ResponseEntity<>(new FileSystemResource(zipFile), responseHeaders, HttpStatus.OK);
   }
   
   @SuppressWarnings("unused")

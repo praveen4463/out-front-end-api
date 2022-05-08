@@ -239,3 +239,11 @@ Enhancements
 ### Enhancements
 
 1. Bumped zwl to 0.6.10
+
+## v0.3.31
+
+Enhancements
+
+### Enhancements
+
+1. Added project codebase download endpoint

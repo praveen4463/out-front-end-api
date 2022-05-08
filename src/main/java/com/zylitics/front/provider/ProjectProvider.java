@@ -1,6 +1,7 @@
 package com.zylitics.front.provider;
 
 import com.zylitics.front.model.Project;
+import com.zylitics.front.model.ProjectDownloadableFile;
 
 import java.util.List;
 import java.util.Optional;
@@ -19,6 +20,8 @@ public interface ProjectProvider {
   Optional<Project> getProject(int projectId, int userId);
   
   void renameProject(String name, int projectId, int userId);
+  
+  List<ProjectDownloadableFile> getProjectDownloadableFiles(int projectId, int userId);
   
   void deleteProject(int projectId, int userId);
 }
