@@ -97,7 +97,7 @@ paths:
           schema:
             $ref: '#/definitions/ApiError'
   /projects/{projectId}/downloadProjectFiles:
-    patch:
+    get:
       description: Downloads files for a project as a compressed package
       operationId: downloadProjectFiles
       produces:
