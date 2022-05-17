@@ -6,7 +6,10 @@ import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.Storage;
 import com.google.common.base.Preconditions;
 import com.zylitics.front.config.APICoreProperties;
+import com.zylitics.front.exception.UnauthorizedException;
 import com.zylitics.front.model.TestFile;
+import com.zylitics.front.model.User;
+import com.zylitics.front.provider.UserProvider;
 import com.zylitics.front.util.CommonUtil;
 import com.zylitics.front.util.IOUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,9 +32,14 @@ public class TestFileController extends AbstractController {
   
   private final APICoreProperties.Storage storageProps;
   
+  private final UserProvider userProvider;
+  
   @Autowired
-  public TestFileController(Storage storage, APICoreProperties apiCoreProperties) {
+  public TestFileController(Storage storage,
+                            UserProvider userProvider,
+                            APICoreProperties apiCoreProperties) {
     this.storage = storage;
+    this.userProvider = userProvider;
     this.storageProps = apiCoreProperties.getStorage();
   }
   
@@ -42,8 +50,10 @@ public class TestFileController extends AbstractController {
                                          @RequestHeader(USER_INFO_REQ_HEADER) String userInfo)
       throws Exception {
     int userId = getUserId(userInfo);
+    User user = userProvider.getUser(userId)
+        .orElseThrow(() -> new UnauthorizedException("User not found"));
     new FileUpload(storage, storageProps.getUserDataBucket(), file, fileName,
-        getFilePrefix(storageProps, userId),
+        getFilePrefix(storageProps, user.getOrganizationId()),
         storageProps.getMaxTestFileSizeMb()).upload();
     return ResponseEntity.ok().build();
   }
@@ -52,9 +62,11 @@ public class TestFileController extends AbstractController {
   public ResponseEntity<List<TestFile>> getFiles(
       @RequestHeader(USER_INFO_REQ_HEADER) String userInfo) {
     int userId = getUserId(userInfo);
+    User user = userProvider.getUser(userId)
+        .orElseThrow(() -> new UnauthorizedException("User not found"));
     Page<Blob> blobs = storage.list(storageProps.getUserDataBucket(),
         Storage.BlobListOption.currentDirectory(),
-        Storage.BlobListOption.prefix(getFilePrefix(storageProps, userId) + "/"));
+        Storage.BlobListOption.prefix(getFilePrefix(storageProps, user.getOrganizationId()) + "/"));
     Iterator<Blob> blobIterator = blobs.iterateAll().iterator();
     List<TestFile> files = new ArrayList<>();
     while (blobIterator.hasNext()) {
@@ -74,8 +86,11 @@ public class TestFileController extends AbstractController {
   public ResponseEntity<byte[]> getFile(@PathVariable String fileName,
                                         @RequestHeader(USER_INFO_REQ_HEADER) String userInfo) {
     int userId = getUserId(userInfo);
+    User user = userProvider.getUser(userId)
+        .orElseThrow(() -> new UnauthorizedException("User not found"));
     Blob blob = storage.get(BlobId.of(storageProps.getUserDataBucket(),
-        CommonUtil.constructStorageFilePath(getFilePrefix(storageProps, userId), fileName)));
+        CommonUtil.constructStorageFilePath(getFilePrefix(storageProps, user.getOrganizationId())
+            , fileName)));
     Preconditions.checkNotNull(blob, fileName + " doesn't exists");
     return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,
         "attachment; filename=\"" + fileName + "\"")
@@ -86,13 +101,16 @@ public class TestFileController extends AbstractController {
   public ResponseEntity<Void> deleteFile(@PathVariable String fileName,
                                          @RequestHeader(USER_INFO_REQ_HEADER) String userInfo) {
     int userId = getUserId(userInfo);
+    User user = userProvider.getUser(userId)
+        .orElseThrow(() -> new UnauthorizedException("User not found"));
     boolean deleted = storage.delete(BlobId.of(storageProps.getUserDataBucket(),
-        CommonUtil.constructStorageFilePath(getFilePrefix(storageProps, userId), fileName)));
+        CommonUtil.constructStorageFilePath(getFilePrefix(storageProps, user.getOrganizationId()),
+            fileName)));
     Preconditions.checkArgument(deleted, fileName + " doesn't exists");
     return ResponseEntity.ok().build();
   }
   
-  private String getFilePrefix(APICoreProperties.Storage storageProps, int userId) {
-    return CommonUtil.replaceUserId(storageProps.getUserUploadsStorageDirTmpl(), userId);
+  private String getFilePrefix(APICoreProperties.Storage storageProps, int orgId) {
+    return CommonUtil.replaceUserId(storageProps.getUserUploadsStorageDirTmpl(), orgId);
   }
 }

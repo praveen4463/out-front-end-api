@@ -247,3 +247,11 @@ Enhancements
 ### Enhancements
 
 1. Added project codebase download endpoint
+
+## v0.3.32
+
+Bug fixes
+
+### Bug fixes
+
+1. Fixed TestFiles uploading mechanism so that it take orgId instead of userId
