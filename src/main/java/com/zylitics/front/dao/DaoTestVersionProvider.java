@@ -196,8 +196,11 @@ public class DaoTestVersionProvider extends AbstractDaoProvider implements TestV
         "INNER JOIN bt_test AS t ON (f.bt_file_id = t.bt_file_id)\n" +
         "INNER JOIN bt_test_version AS v ON (t.bt_test_id = v.bt_test_id)\n" +
         "INNER JOIN unnest(:bt_test_version_ids)\n" +
-        "WITH ORDINALITY temp (bt_test_version_id, ord)\n" +
-        "USING (bt_test_version_id) ORDER by temp.ord"; // put versions in bt_build_tests in the same order
+        "WITH ORDINALITY temp (bt_test_version_id, ord) USING (bt_test_version_id)\n" +
+        "WHERE v.code IS NOT NULL\n" +
+        "AND t.name !~ '^[a-z0-9_]+$'\n" + // Match only non identifiers test names.
+        "AND length(regexp_replace(coalesce(v.code, ''), '[\\n\\r\\t\\s]', '', 'g')) > 0\n" +
+        "ORDER by temp.ord"; // put versions in bt_build_tests in the same order
     // as in the versionIds list
     int result = jdbc.update(sql, new SqlParamsBuilder()
         .withInteger("bt_build_id", buildId)

@@ -255,3 +255,11 @@ Bug fixes
 ### Bug fixes
 
 1. Fixed TestFiles uploading mechanism so that it take orgId instead of userId
+
+## v0.3.33
+
+Enhancements
+
+### Enhancements
+
+1. Excluded functions from build run
