@@ -22,7 +22,7 @@ public class ZwlFileIO {
     files.forEach(f -> {
       StringBuilder sb = new StringBuilder();
       f.getTests().forEach(t -> {
-        sb.append(String.format("@Test(\"%s\") {\n", t.getTestName()));
+        sb.append(String.format("@Test(\"%s\") {\n", t.getTestName().replaceAll("\"", "\\\\\"")));
         sb.append(t.getCode().replaceAll("(?m)^", "  "));
         sb.append("\n}\n\n");
       });

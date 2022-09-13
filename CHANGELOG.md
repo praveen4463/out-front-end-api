@@ -263,3 +263,11 @@ Enhancements
 ### Enhancements
 
 1. Excluded functions from build run
+
+## v0.3.34
+
+Bug fixes
+
+### Bug fixes
+
+1. Escaped quotes in zwl generated files' test names (@Test("xx \"y\" xx"))
