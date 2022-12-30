@@ -38,6 +38,8 @@ public class Build {
   
   private boolean captureDriverLogs;
   
+  private boolean notifyOnCompletion;
+  
   private boolean abortOnFailure;
   
   private boolean aetKeepSingleWindow;
@@ -215,6 +217,15 @@ public class Build {
   
   public Build setCaptureDriverLogs(boolean captureDriverLogs) {
     this.captureDriverLogs = captureDriverLogs;
+    return this;
+  }
+  
+  public boolean isNotifyOnCompletion() {
+    return notifyOnCompletion;
+  }
+  
+  public Build setNotifyOnCompletion(boolean notifyOnCompletion) {
+    this.notifyOnCompletion = notifyOnCompletion;
     return this;
   }
   

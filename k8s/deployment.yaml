@@ -126,7 +126,7 @@ metadata:
     # https://github.com/kubernetes/ingress-nginx/issues/1567
     # nginx.ingress.kubernetes.io/ssl-redirect: "false"
 spec:
-  # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#ingresstls-v1beta1-extensions
+  # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#ingresstls-v1-networking-k8s-io
   tls:
     - secretName: zl-k8s-univ-cert
   rules:

@@ -27,6 +27,8 @@ public class BuildRunConfig {
   
   private boolean captureDriverLogs;
   
+  private boolean notifyOnCompletion;
+  
   private Map<String, Integer> selectedBuildVarIdPerKey;
   
   private RunnerPreferences runnerPreferences;
@@ -88,6 +90,15 @@ public class BuildRunConfig {
   
   public BuildRunConfig setCaptureDriverLogs(boolean captureDriverLogs) {
     this.captureDriverLogs = captureDriverLogs;
+    return this;
+  }
+  
+  public boolean isNotifyOnCompletion() {
+    return notifyOnCompletion;
+  }
+  
+  public BuildRunConfig setNotifyOnCompletion(boolean notifyOnCompletion) {
+    this.notifyOnCompletion = notifyOnCompletion;
     return this;
   }
   

@@ -27,7 +27,7 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
       "INSERT INTO bt_build\n" +
       "(build_key, name, server_screen_size, server_timezone_with_dst,\n" +
       "shot_bucket_session_storage, abort_on_failure,\n" +
-      "capture_shots, capture_driver_logs, aet_keep_single_window,\n" +
+      "capture_shots, capture_driver_logs, notify_on_completion, aet_keep_single_window,\n" +
       "aet_update_url_blank, aet_reset_timeouts, aet_delete_all_cookies, bt_project_id,\n" +
       "source_type, bt_build_request_id, create_date)\n";
   
@@ -93,7 +93,7 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
     String sql = BUILD_INSERT_STM +
         "VALUES (:build_key, :name, :server_screen_size, :server_timezone_with_dst,\n" +
         ":shot_bucket_session_storage, :abort_on_failure,\n" +
-        ":capture_shots, :capture_driver_logs, :aet_keep_single_window,\n" +
+        ":capture_shots, :capture_driver_logs, :notify_on_completion, :aet_keep_single_window,\n" +
         ":aet_update_url_blank, :aet_reset_timeouts, :aet_delete_all_cookies, :bt_project_id,\n" +
         ":source_type, :bt_build_request_id, :create_date) RETURNING bt_build_id";
     RunnerPreferences runnerPreferences = config.getRunnerPreferences();
@@ -106,6 +106,7 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
         .withBoolean("abort_on_failure", runnerPreferences.isAbortOnFailure())
         .withBoolean("capture_shots", config.isCaptureShots())
         .withBoolean("capture_driver_logs", config.isCaptureDriverLogs())
+        .withBoolean("notify_on_completion", config.isNotifyOnCompletion())
         .withBoolean("aet_keep_single_window", runnerPreferences.isAetKeepSingleWindow())
         .withBoolean("aet_update_url_blank", runnerPreferences.isAetUpdateUrlBlank())
         .withBoolean("aet_reset_timeouts", runnerPreferences.isAetResetTimeouts())
@@ -149,7 +150,7 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
     String sql = BUILD_INSERT_STM +
         "SELECT :build_key, name, server_screen_size, server_timezone_with_dst,\n" +
         ":shot_bucket_session_storage, abort_on_failure,\n" +
-        "capture_shots, capture_driver_logs, aet_keep_single_window,\n" +
+        "capture_shots, capture_driver_logs, notify_on_completion, aet_keep_single_window,\n" +
         "aet_update_url_blank, aet_reset_timeouts, aet_delete_all_cookies, bt_project_id,\n" +
         ":source_type, :bt_build_request_id, :create_date\n" +
         "FROM bt_build WHERE bt_build_id = :bt_build_id \n" +
@@ -185,7 +186,7 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
         "end_date AT TIME ZONE 'UTC' AS end_date,\n" +
         "all_done_date AT TIME ZONE 'UTC' AS all_done_date,\n" +
         "final_status, error, shot_bucket_session_storage, abort_on_failure,\n" +
-        "capture_shots, capture_driver_logs,\n" +
+        "capture_shots, capture_driver_logs, notify_on_completion,\n" +
         "aet_keep_single_window, aet_update_url_blank, aet_reset_timeouts,\n" +
         "aet_delete_all_cookies, bt_project_id, source_type, bt_build_request_id,\n" +
         "bu.create_date AT TIME ZONE 'UTC' AS create_date\n" +
@@ -221,6 +222,7 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
                 .setAbortOnFailure(rs.getBoolean("abort_on_failure"))
                 .setCaptureShots(rs.getBoolean("capture_shots"))
                 .setCaptureDriverLogs(rs.getBoolean("capture_driver_logs"))
+                .setNotifyOnCompletion(rs.getBoolean("notify_on_completion"))
                 .setAetKeepSingleWindow(rs.getBoolean("aet_keep_single_window"))
                 .setAetUpdateUrlBlank(rs.getBoolean("aet_update_url_blank"))
                 .setAetResetTimeouts(rs.getBoolean("aet_reset_timeouts"))
