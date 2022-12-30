@@ -271,3 +271,11 @@ Bug fixes
 ### Bug fixes
 
 1. Escaped quotes in zwl generated files' test names (@Test("xx \"y\" xx"))
+
+## v0.3.35
+
+Enhancements
+
+### Enhancements
+
+1. Added notify email from console
